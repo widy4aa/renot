@@ -1,29 +1,25 @@
 <template>
     <!-- Background utama -->
-    <div class="min-h-screen flex flex-col p-3 gap-3" style="background:#F0F0EE;">
+    <div class="min-h-screen flex flex-col p-3 gap-3" style="background:#F2F2F0;">
 
         <!-- Topbar full width -->
         <AppTopbar
             :user="auth.user"
-            @logout="handleLogout"
         />
 
-        <!-- Area bawah: sidebar + konten -->
+        <!-- Area bawah: sidebar kiri + konten -->
         <div class="flex gap-3 flex-1 relative">
 
-            <!-- Sidebar placeholder -->
-            <div class="shrink-0" :style="sidebarPlaceholderStyle">
-                <AppSidebar
-                    :menu-groups="menuGroups"
-                    :user="auth.user"
-                    style="position:fixed; top:50%; transform:translateY(-50%); z-index:10;"
-                    @logout="handleLogout"
-                    @width-change="onWidthChange"
-                />
-            </div>
+            <!-- Sidebar vertikal kiri -->
+            <AppSidebar
+                :menu-groups="menuGroups"
+                :user="auth.user"
+                profile-route="admin.profile"
+                @logout="handleLogout"
+            />
 
             <!-- Konten halaman -->
-            <main class="flex-1 min-w-0 overflow-y-auto">
+            <main class="flex-1 min-w-0">
                 <RouterView />
             </main>
 
@@ -32,7 +28,6 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppSidebar from '@/components/AppSidebar.vue';
@@ -41,14 +36,6 @@ import AppTopbar from '@/components/AppTopbar.vue';
 const auth   = useAuthStore();
 const router = useRouter();
 
-const sidebarWidth = ref(localStorage.getItem('renot_sidebar_collapsed') === 'true' ? 56 : 200);
-const sidebarPlaceholderStyle = computed(() => ({
-    width: sidebarWidth.value + 'px',
-    transition: 'width 200ms ease',
-}));
-function onWidthChange(w) { sidebarWidth.value = w; }
-
-// ── Definisi menu admin ────────────────────────────────────
 const menuGroups = [
     {
         label: null,

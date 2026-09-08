@@ -1,35 +1,27 @@
 <template>
-    <div class="min-h-screen flex flex-col p-3 gap-3" style="background:#F0F0EE;">
+    <div class="min-h-screen flex flex-col p-3 gap-3" style="background:#F2F2F0;">
 
         <!-- ── Topbar full width ── -->
         <AppTopbar
             :user="auth.user"
             :unread-count="unreadCount"
             notif-route="pegawai.notifikasi"
-            profile-route="pegawai.profile"
-            @logout="handleLogout"
             @notif-read="unreadCount = $event"
         />
 
-        <!-- ── Area bawah: sidebar fixed center + konten ── -->
+        <!-- ── Area bawah: sidebar kiri + konten ── -->
         <div class="flex gap-3 flex-1 relative">
 
-            <!-- Sidebar: fixed, center vertical layar, tidak goyang -->
-            <div
-                class="shrink-0"
-                :style="sidebarPlaceholderStyle"
-            >
-                <AppSidebar
-                    :menu-groups="menuGroups"
-                    :user="auth.user"
-                    style="position:fixed; top:50%; transform:translateY(-50%); z-index:10;"
-                    @logout="handleLogout"
-                    @width-change="onWidthChange"
-                />
-            </div>
+            <!-- Sidebar vertikal kiri -->
+            <AppSidebar
+                :menu-groups="menuGroups"
+                :user="auth.user"
+                profile-route="pegawai.profile"
+                @logout="handleLogout"
+            />
 
             <!-- Konten halaman -->
-            <main class="flex-1 min-w-0 overflow-y-auto">
+            <main class="flex-1 min-w-0">
                 <RouterView />
             </main>
 
@@ -38,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, provide } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import axios from 'axios';
@@ -48,18 +40,11 @@ import AppTopbar from '@/components/AppTopbar.vue';
 const auth   = useAuthStore();
 const router = useRouter();
 
-const unreadCount    = ref(0);
-const sidebarWidth   = ref(localStorage.getItem('renot_sidebar_collapsed') === 'true' ? 56 : 200);
+const unreadCount = ref(0);
 
-// Placeholder lebar sidebar agar konten tidak tertimpa
-const sidebarPlaceholderStyle = computed(() => ({
-    width: sidebarWidth.value + 'px',
-    transition: 'width 200ms ease',
-}));
-
-function onWidthChange(w) {
-    sidebarWidth.value = w;
-}
+// ── FAQ dinamis per halaman ────────────────────────────
+const pageFaqs = ref(null);
+provide('setPageFaqs', (faqs) => { pageFaqs.value = faqs; });
 
 const menuGroups = [
     {
@@ -75,6 +60,11 @@ const menuGroups = [
                 label: 'Dokumen Saya',
                 activeOn: ['pegawai.dokumen', 'pegawai.dokumen.tambah', 'pegawai.dokumen.detail', 'pegawai.dokumen.edit'],
                 icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+            },
+            {
+                name: 'pegawai.notifikasi',
+                label: 'Notifikasi',
+                icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`,
             },
         ],
     },

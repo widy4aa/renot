@@ -1,5 +1,5 @@
 # ReNot — Design Philosophy
-**Versi:** 1.0
+**Versi:** 1.1 (Modern Bold)
 **Tanggal:** 8 September 2026
 **Berlaku untuk:** Seluruh halaman dan komponen ReNot
 
@@ -37,14 +37,15 @@ Tiga kata yang **tidak boleh** menggambarkan ReNot:
 
 ### 2.1 Palet Utama
 
-Seluruh UI dibangun dari 5 token warna dasar. Tidak boleh ada warna di luar daftar ini kecuali untuk status semantik (lihat 2.2).
+Seluruh UI dibangun dari token warna berikut. Tidak boleh ada warna di luar daftar ini kecuali untuk status semantik (lihat 2.2).
 
 ```
---color-bg          #F8F8F7   Background halaman utama (warm off-white)
+--color-bg          #F0F0EE   Background halaman utama (warm off-white)
 --color-surface     #FFFFFF   Card, modal, panel, sidebar
 --color-border      #E5E7EB   Border, divider, garis pemisah
 --color-primary     #006CB8   Biru Pertamina — CTA, link, active state, focus ring
 --color-danger      #ED1B2F   Merah Pertamina — expired, ditolak, hapus, alert kritis
+--color-accent      #ACC42A   Lime Pertamina — status Aktif, badge success
 ```
 
 ### 2.2 Status Semantik (dokumen)
@@ -52,7 +53,7 @@ Seluruh UI dibangun dari 5 token warna dasar. Tidak boleh ada warna di luar daft
 Warna status dokumen adalah bagian dari sistem informasi — bukan dekorasi. Setiap warna punya makna tunggal dan tidak boleh dipakai untuk hal lain.
 
 ```
-Aktif           #16A34A   Hijau — dokumen berlaku, aman
+Aktif           #ACC42A   Lime Pertamina — dokumen berlaku, aman (warna resmi ketiga Pertamina)
 Segera Expired  #D97706   Amber — perlu perhatian segera
 Expired         #ED1B2F   Merah Pertamina — kritis, harus diperbarui
 Pending         #6B7280   Abu — menunggu, netral
@@ -71,9 +72,9 @@ Ditolak         #DB2777   Pink-merah — tindakan gagal, perlu diperbaiki
 
 ### 2.4 Asal Warna Pertamina
 
-`#006CB8` dan `#ED1B2F` diambil langsung dari SVG logo resmi PT Pertamina (Persero) di pertamina.com. Ini bukan interpretasi — ini hex aktual dari aset digital resmi perusahaan.
+`#006CB8`, `#ED1B2F`, dan `#ACC42A` diambil langsung dari SVG logo resmi PT Pertamina (Persero) di pertamina.com. Ini bukan interpretasi — ini hex aktual dari aset digital resmi perusahaan.
 
-Warna ketiga Pertamina (`#ACC42A` Lime) **sengaja tidak dipakai** di versi ini karena terlalu vivid untuk interface compliance yang dipakai lama. Bisa ditambahkan di versi mendatang untuk elemen sustainability/NRE jika ada konteks yang sesuai.
+`#ACC42A` (Lime Pertamina) mulai digunakan pada versi 1.1 untuk status **Aktif** — menggantikan `#16A34A` (generic green). Konteks penggunaan: badge aktif, angka stat card aktif, accent bar. Tidak boleh digunakan untuk elemen navigasi atau CTA utama.
 
 ### 2.5 Yang Dilarang
 
@@ -187,16 +188,20 @@ Bukan 12px yang terlalu friendly, bukan 2px yang terlalu kaku. 8px adalah titik 
 
 ## 6. Shadow
 
-**Minimal dan fungsional.**
+**Minimal dan fungsional. Versi Modern Bold menggunakan shadow lebih dalam untuk memperkuat kesan floating.**
 
 ```
-shadow-none   : Elemen flat — tabel, sidebar, navigasi
-shadow-sm     : Card di atas background — elevasi paling umum
-shadow-md     : Dropdown, popover, date picker — elemen mengambang
+shadow-none   : Elemen flat — tabel, navigasi inline
+shadow-sm     : Card konten biasa — elevasi standar
+shadow-md     : Dropdown, popover — elemen mengambang
 shadow-lg     : Modal, dialog — layer tertinggi
+shadow-float  : Sidebar, Topbar — 0 4px 20px rgba(0,0,0,0.12), 0 1px 0 rgba(0,0,0,0.04)
+shadow-panel  : Panel besar mengambang — 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)
 ```
 
-Tidak ada shadow berwarna. Tidak ada neon glow. Tidak ada shadow multiple layered untuk kesan "depth".
+Tidak ada shadow berwarna. Tidak ada neon glow. Tidak ada shadow multiple layered untuk kesan \"depth\" artifisial.
+
+Pengecualian Modern Bold: Komponen `floating` (sidebar dan topbar) menggunakan `shadow-float` dan `shadow-panel` yang lebih dalam dari `shadow-sm` standar. Ini bukan dekoratif — ini memperkuat hierarki visual bahwa komponen navigasi berada di layer yang berbeda dari konten.
 
 ---
 

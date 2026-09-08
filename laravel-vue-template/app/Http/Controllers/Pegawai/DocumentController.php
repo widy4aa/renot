@@ -269,6 +269,8 @@ class DocumentController extends Controller
             'rejection_reason' => $document->rejection_reason,
             'approved_at' => $document->approved_at?->format('Y-m-d H:i'),
             'has_file' => ! is_null($document->file_path),
+            'file_path' => $document->file_path,
+            'file_mime' => $document->file_mime,
             'file_name' => $document->file_name,
             'file_size' => $document->file_size,
             'created_at' => $document->created_at?->format('Y-m-d H:i'),

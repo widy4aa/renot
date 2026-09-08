@@ -1,9 +1,9 @@
 # DOKUMENTASI TEKNIS — ReNot
 ## Reminder & Notification Sertifikasi Pegawai
 
-**Versi dokumen:** 1.0
+**Versi dokumen:** 1.1
 **Terakhir diperbarui:** 8 September 2026
-**Status project:** Sprint 2 — Role Pegawai selesai, Role Admin belum dibangun
+**Status project:** Sprint 2 selesai (Role Pegawai) + UI Redesign Modern Bold — Role Admin belum dibangun
 
 ---
 
@@ -35,7 +35,7 @@ ReNot adalah aplikasi internal perusahaan (konteks Pertamina) untuk memantau mas
 **Dokumen referensi:**
 - `SRS-ReNot.md` — Software Requirements Specification lengkap
 - `database.dbml` — Database diagram (bisa dibuka di dbdiagram.io)
-- `PHILOSOPHY.md` — Design system dan aturan UI (WAJIB dibaca sebelum membuat UI baru)
+- `PHILOSOPHY.md` — Design system dan aturan UI v1.1 (WAJIB dibaca sebelum membuat UI baru)
 
 ---
 
@@ -178,7 +178,7 @@ laravel-vue-template/
 │   ├── og.jpg                         ← Gambar hero halaman login (panel kiri 70%)
 │   └── icon.png                       ← Icon/logo aplikasi ReNot
 └── resources/
-    ├── css/app.css                    ← Tailwind v4 + design tokens
+    ├── css/app.css                    ← Tailwind v4 + design tokens (Modern Bold v1.1)
     ├── views/welcome.blade.php        ← SPA entry point + load Plus Jakarta Sans
     └── js/
         ├── app.js                     ← Entry point — init Pinia → fetchUser → mount router → mount app
@@ -188,20 +188,20 @@ laravel-vue-template/
         ├── stores/
         │   └── auth.js                ← Pinia auth store
         ├── composables/
-        │   └── useDocumentHelpers.js  ← Helper: statusConfig, formatDate, formatFileSize, daysUntilExpiry
+        │   └── useDocumentHelpers.js  ← Helper: statusConfig (dengan badgeStyle inline), formatDate, formatFileSize, daysUntilExpiry
         ├── components/
-        │   ├── AppSidebar.vue         ← Sidebar reusable (fluid collapse, icon-only, localStorage)
-        │   └── AppTopbar.vue          ← Topbar reusable (logo, bell notif dropdown, user dropdown)
+        │   ├── AppSidebar.vue         ← Sidebar vertikal kiri, full height, merah Pertamina, profil+logout+FAQ di bawah
+        │   └── AppTopbar.vue          ← Topbar merah Pertamina, logo+nama, bell notif dropdown, nama user (tanpa dropdown)
         ├── layouts/
-        │   ├── PegawaiLayout.vue      ← Layout role pegawai
-        │   └── AdminLayout.vue        ← Layout role admin
+        │   ├── PegawaiLayout.vue      ← Layout role pegawai (flex row: sidebar kiri + main)
+        │   └── AdminLayout.vue        ← Layout role admin (flex row: sidebar kiri + main)
         └── pages/
             ├── auth/
-            │   ├── Login.vue          ← Layout 70/30, gambar kiri, form kanan, FAQ help button
-            │   ├── ForgotPassword.vue
-            │   └── ResetPassword.vue
+            │   ├── Login.vue          ← Layout 70/30, gambar kiri, form kanan
+            │   ├── ForgotPassword.vue ← Konsisten dengan design system #006CB8
+            │   └── ResetPassword.vue  ← Konsisten dengan design system #006CB8
             ├── pegawai/
-            │   ├── Dashboard.vue      ← 6 stat card + 5 notifikasi terbaru
+            │   ├── Dashboard.vue      ← Header avatar + 6 stat card + quick actions + 2 kolom (notifikasi + sertifikat terakhir)
             │   ├── Dokumen.vue        ← List dokumen + filter status + export Excel
             │   ├── DokumenDetail.vue  ← Detail + status + riwayat file
             │   ├── DokumenForm.vue    ← Upload/edit dokumen (kategori dinamis, drag & drop)
@@ -355,77 +355,121 @@ resetPassword(payload)     // POST /api/reset-password
 ### Layout Struktur
 
 ```
-PegawaiLayout.vue
-├── AppTopbar.vue         ← Logo kiri, bell notif dropdown, user dropdown
-│   (full width, floating card, rounded-2xl, shadow)
+PegawaiLayout.vue / AdminLayout.vue
+├── AppTopbar.vue      ← Full width, merah Pertamina #ED1B2F, logo+nama kiri, bell+nama user kanan
 └── [flex row]
-    ├── [placeholder div] ← Lebar sama dengan sidebar (untuk spacing)
-    │   └── AppSidebar.vue ← Fixed, top:50%, translateY(-50%) → center vertical
-    └── <main>            ← Konten halaman
-        └── <RouterView />
+    ├── AppSidebar.vue ← Vertikal kiri, full height calc(100vh - 90px), sticky top:12px
+    │   ├── nav items  ← Menu utama dengan icon container rounded-lg
+    │   └── bottom     ← Bantuan (FAQ popup) + Profil + Keluar (modal konfirmasi)
+    └── <main>         ← Konten halaman (RouterView)
 ```
-
-**Sidebar fixed center:**
-```css
-position: fixed;
-top: 50%;
-transform: translateY(-50%);
-```
-Placeholder div di sebelahnya punya `width` yang sama dengan sidebar (reactive via `@width-change` emit).
-
-### AppSidebar.vue
-
-- **Collapsed state** tersimpan di `localStorage` key `renot_sidebar_collapsed`
-- Saat toggle, emit `@width-change` dengan lebar baru (200px atau 56px)
-- Tombol toggle `←/→` di bagian bawah sidebar
-- Tooltip via `title` attribute saat collapsed
 
 ### AppTopbar.vue
 
-- Logo + nama "ReNot" di kiri
-- Bell notifikasi: fetch 5 terbaru dari `/api/pegawai/notifications`, bisa mark read, lihat semua
-- User dropdown: info user + role badge + link profil + logout
+- Background: **Merah Pertamina `#ED1B2F`**, `border-radius: 16px`, shadow merah subtle
+- Kiri: logo icon (container putih transparan) + "ReNot" bold + divider + "PERTAMINA" uppercase
+- Kanan: bell notifikasi (dropdown 5 terbaru, mark read) + divider + avatar/initial + nama user
+- **Tidak ada user dropdown** — profil dan logout dipindah ke sidebar
+- Badge notif: white pulse animation saat ada unread
+- Props: `user`, `unreadCount`, `notifRoute`
+- Emits: `notif-read`
+
+### AppSidebar.vue
+
+- Background: **Merah Pertamina `#ED1B2F`** flat, `border-radius: 16px`, lebar 220px
+- `position: sticky; top: 12px; height: calc(100vh - 90px)` — mengikuti scroll, full tinggi layar
+- Setiap nav item punya **icon container** `w-7 h-7 rounded-lg` background `rgba(255,255,255,0.12)`
+- Active item: background `rgba(255,255,255,0.20)`, font-weight 700
+- **Di bagian bawah sidebar** (setelah divider):
+  - **Bantuan** — toggle FAQ panel popup ke atas sidebar (3 FAQ card)
+  - **Profil** — RouterLink ke halaman profil
+  - **Keluar** — membuka modal konfirmasi logout
+- **Modal logout**: overlay gelap, icon, teks konfirmasi, tombol Batal + Ya Keluar
+- Props: `menuGroups`, `user`, `profileRoute`
+- Emits: `logout`
+
+### Dashboard Pegawai (`pages/pegawai/Dashboard.vue`)
+
+Struktur halaman dashboard:
+
+```
+1. Header card   ← Avatar initial merah, nama, chips (role + no. pegawai + departemen), tanggal hari ini
+2. Stat cards    ← 6 card grid, masing-masing punya icon container + angka + top accent bar per warna status
+3. Quick actions ← Tombol "Upload Dokumen" (merah) + "Semua Dokumen" (card-elevated)
+4. Bottom 2 col  ← Notifikasi Terbaru (2/3 lebar) | Sertifikat Terakhir (1/3 lebar)
+```
+
+**Sertifikat Terakhir** diambil dari `GET /api/pegawai/documents` (4 dokumen terbaru), bukan dari endpoint dashboard. Ini fetch terpisah di dalam `fetchDashboard()`.
 
 ### useDocumentHelpers.js
 
-Composable reusable untuk semua halaman dokumen:
+Composable reusable untuk semua halaman dokumen. Sejak v1.1, menambahkan `badgeStyle` (inline style string) dan `accentColor` per status:
 
 ```js
 const { getStatusConfig, formatDate, formatFileSize, daysUntilExpiry } = useDocumentHelpers();
 
-getStatusConfig('aktif')        // { label, badge, dot } — warna per status
+getStatusConfig('aktif')
+// {
+//   label: 'Aktif',
+//   badge: 'bg-lime-100 text-lime-700',
+//   badgeStyle: 'background:#F7FEE7; color:#5a6e0f;',
+//   dot: 'bg-lime-500',
+//   dotStyle: 'background:#ACC42A;',
+//   accentColor: '#ACC42A'
+// }
+
 formatDate('2026-09-08')        // "8 September 2026"
 formatFileSize(1048576)         // "1.0 MB"
 daysUntilExpiry('2026-10-01')  // 23 (hari tersisa, negatif jika sudah lewat)
+```
+
+### Global CSS Class: `.card-elevated`
+
+Didefinisikan di `resources/css/app.css`, dipakai di semua halaman untuk card yang tampil jelas di atas background:
+
+```css
+.card-elevated {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+}
+.card-elevated:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+}
 ```
 
 ---
 
 ## 8. Design System
 
-**WAJIB baca `PHILOSOPHY.md` sebelum membuat UI baru.**
+**WAJIB baca `PHILOSOPHY.md` v1.1 sebelum membuat UI baru.**
 
-### Token Warna Utama
+### Token Warna Utama (v1.1 — Modern Bold)
 
 ```
-Background halaman  #F0F0EE   abu sangat muda (bukan putih)
+Background halaman  #F2F2F0   abu sangat muda warm
 Surface (card)      #FFFFFF
-Border              #E5E7EB
-Primary (CTA, link) #006CB8   Biru Pertamina
-Danger (expired)    #ED1B2F   Merah Pertamina
+Border              #E2E8F0   (lebih gelap dari sebelumnya untuk card-elevated)
+
+Pertamina Blue      #006CB8   CTA sekunder, link, focus ring
+Pertamina Red       #ED1B2F   Topbar, sidebar, CTA utama, danger
+Pertamina Lime      #ACC42A   Status Aktif, accent sukses (resmi digunakan sejak v1.1)
+
 Text heading        #111827
 Text body           #374151
-Text muted          #9CA3AF
+Text muted          #6B7280
+Text disabled       #9CA3AF
 ```
 
-### Status Dokumen
+### Status Dokumen (diperbarui v1.1)
 
 ```
-aktif            → hijau   #16A34A
-segera_expired   → amber   #D97706
-expired          → merah   #ED1B2F
-pending_approval → abu     #6B7280
-ditolak          → pink    #DB2777
+aktif            → Lime Pertamina  #ACC42A   (sebelumnya #16A34A hijau generic)
+segera_expired   → Amber           #D97706
+expired          → Merah Pertamina #ED1B2F
+pending_approval → Abu             #6B7280
+ditolak          → Pink            #DB2777
 ```
 
 ### Font
@@ -433,24 +477,39 @@ ditolak          → pink    #DB2777
 **Plus Jakarta Sans** — di-load di `welcome.blade.php` via Google Fonts.
 Weights: 400, 500, 600, 700.
 
-### Komponen Floating
+### Topbar & Sidebar
 
-Sidebar dan topbar menggunakan:
+Keduanya menggunakan **Merah Pertamina `#ED1B2F`** sebagai background:
+
 ```css
+/* Topbar */
+background: #ED1B2F;
 border-radius: 16px;
-box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+box-shadow: 0 2px 16px rgba(237,27,47,0.25), 0 1px 4px rgba(0,0,0,0.08);
+
+/* Sidebar */
+background: #ED1B2F;
+border-radius: 16px;
+width: 220px;
+height: calc(100vh - 90px);
+position: sticky;
+top: 12px;
 ```
 
-Background halaman `#F0F0EE` agar kontras dengan card putih.
+Semua teks di dalam topbar dan sidebar menggunakan putih (`#ffffff`) dengan opacity bervariasi untuk hierarki:
+- Teks utama/aktif: `#ffffff` (100%)
+- Teks default: `rgba(255,255,255,0.85)`
+- Label group: `rgba(255,255,255,0.50)`
+- Divider: `rgba(255,255,255,0.15)`
 
-### Yang Dilarang (dari PHILOSOPHY.md)
+### Yang Dilarang (dari PHILOSOPHY.md v1.1)
 
-- Gradient apapun
-- Glassmorphism / backdrop-blur
+- Gradient apapun di komponen UI (topbar/sidebar sudah flat, bukan gradient)
 - `indigo-500` sebagai primary
-- Card grid 3 kolom "icon + judul + 2 baris"
+- Card grid 3 kolom "icon + judul + 2 baris" generic
 - Bounce/spring animation
 - Font size < 12px
+- Warna di luar token yang terdefinisi
 
 ---
 
@@ -495,7 +554,7 @@ Semua password: `password`
 | GET | `/api/pegawai/profile` | Data profil |
 | POST | `/api/pegawai/profile` | Update HP + foto (multipart/form-data) |
 | PUT | `/api/pegawai/password` | Ganti password |
-| GET | `/api/pegawai/documents` | List dokumen (`?status=aktif`) |
+| GET | `/api/pegawai/documents` | List dokumen (`?status=aktif`) — dipakai juga oleh Dashboard untuk card Sertifikat Terakhir |
 | POST | `/api/pegawai/documents` | Upload dokumen baru |
 | GET | `/api/pegawai/documents/export` | Export Excel (`?status=aktif`) |
 | GET | `/api/pegawai/documents/{id}` | Detail dokumen |
@@ -508,7 +567,7 @@ Semua password: `password`
 
 ### Admin (belum dibangun)
 
-Endpoint admin belum ada. Hanya layout dan placeholder dashboard yang sudah ada.
+Endpoint admin belum ada. Layout dan placeholder dashboard sudah ada, menu sidebar admin sudah terdefinisi (Dashboard, Dokumen, Approval, Pegawai, Departemen, Kategori Sertifikasi, Pengaturan Sistem, Audit Trail).
 
 ---
 
@@ -524,15 +583,19 @@ Endpoint admin belum ada. Hanya layout dan placeholder dashboard yang sudah ada.
 | Seeders | User, departemen, kategori, jadwal reminder, dokumen, notifikasi |
 | Auth | Login, logout, lupa password, reset password, redirect by role |
 | Middleware role | EnsureRole untuk guard endpoint |
-| Layout sistem | AppTopbar + AppSidebar (floating, fluid collapse) |
-| Halaman Login | Layout 70/30, gambar kiri, form kanan, FAQ button |
-| Dashboard Pegawai | 6 stat card + 5 notif terbaru, link ke detail |
+| UI Redesign — Modern Bold | Topbar + sidebar merah Pertamina, card-elevated, warna Lime #ACC42A untuk status aktif |
+| Layout sistem | AppTopbar (merah, tanpa user dropdown) + AppSidebar (vertikal kiri, full height, profil+logout+FAQ di bawah) |
+| Halaman Login | Layout 70/30, gambar kiri, form kanan, konsisten design system |
+| ForgotPassword & ResetPassword | Diperbarui: warna Pertamina konsisten, layout card elevated |
+| Dashboard Pegawai | Header avatar + 6 stat card (dengan icon per status) + quick actions + 2 kolom (notifikasi + sertifikat terakhir) |
 | Dokumen Saya | List + filter status + upload + edit + hapus + download + export Excel |
 | Detail Dokumen | Status badge, alasan tolak, riwayat file versi |
 | Form Dokumen | Dropdown kategori dinamis, drag & drop file |
 | Notifikasi Pegawai | List + mark read + mark all + link ke dokumen |
 | Profil Pegawai | Edit HP + foto + ganti password |
 | Export Excel | Per pegawai (filter status) + endpoint admin siap |
+| Modal Logout | Konfirmasi "Yakin ingin keluar?" dengan dua tombol di sidebar |
+| Global `.card-elevated` | CSS class reusable untuk semua card dengan border tegas + shadow |
 
 ### Belum Dibangun ❌
 
@@ -561,7 +624,7 @@ Endpoint admin belum ada. Hanya layout dan placeholder dashboard yang sudah ada.
 2. **Tambah route group** `middleware('role:admin')->prefix('admin')` di `api.php`
 3. **Dashboard admin endpoint** — query stats total pegawai, dokumen per status, breakdown per kategori HSSE/Aviasi, filter per departemen
 4. **Approval endpoint** — `POST /api/admin/documents/{id}/approve` dan `POST /api/admin/documents/{id}/reject`
-5. **Update halaman** `pages/admin/Dashboard.vue` dengan stat cards
+5. **Update halaman** `pages/admin/Dashboard.vue` dengan stat cards (ikuti pola Dashboard pegawai)
 6. **Buat halaman** `pages/admin/Approval.vue`
 
 ### Prioritas Kedua — CRUD Master Data
@@ -578,14 +641,17 @@ Endpoint admin belum ada. Hanya layout dan placeholder dashboard yang sudah ada.
     - Insert ke `reminder_logs` (prevent duplicate)
 11. **Email template** — pakai `email_templates` dari DB, parse placeholder `{Nama Pegawai}` dll
 
-### Catatan Penting
+### Catatan Penting untuk Developer Berikutnya
 
-- **Saat membuat UI baru**, selalu baca `PHILOSOPHY.md` terlebih dahulu. Jangan pakai warna di luar token yang sudah didefinisikan.
-- **Sidebar admin** di `AdminLayout.vue` sudah punya 6 menu siap (Dashboard, Dokumen, Approval, Pegawai, Departemen, Kategori, Pengaturan, Audit Trail) — tinggal buat halaman dan route-nya.
+- **Saat membuat UI baru**, selalu baca `PHILOSOPHY.md` v1.1 terlebih dahulu. Topbar dan sidebar sudah merah — komponen baru harus konsisten dengan palet ini.
+- **Sidebar admin** di `AdminLayout.vue` sudah punya 8 menu siap (Dashboard, Dokumen, Approval, Pegawai, Departemen, Kategori, Pengaturan, Audit Trail) — tinggal buat halaman dan route-nya.
 - **`DocumentsExport.php`** sudah siap untuk export admin — tinggal buat endpoint dan tombol di UI.
 - **`EnsureRole` middleware** sudah ada — untuk admin cukup pakai `middleware('role:admin')`.
-- **Jangan lupa** `Storage::url()` setiap kali return URL avatar/file dari backend.
+- **`Storage::url()`** wajib digunakan setiap kali return URL avatar/file dari backend.
+- **`.card-elevated`** adalah class global yang harus dipakai untuk semua card konten. Jangan hardcode `border` dan `box-shadow` per komponen.
+- **Warna status Aktif** sekarang `#ACC42A` (Lime Pertamina), bukan `#16A34A`. Ini sudah diupdate di `useDocumentHelpers.js` dan terdokumentasi di `PHILOSOPHY.md`.
+- **Dashboard menggunakan 2 API call** saat load: `GET /api/pegawai/dashboard` untuk stats + notifikasi, dan `GET /api/pegawai/documents` untuk card sertifikat terakhir. Ini by design — endpoint dashboard tidak mengembalikan list dokumen lengkap.
 
 ---
 
-*Dokumen ini dibuat otomatis pada 8 September 2026. Update dokumen ini setiap kali ada perubahan signifikan pada arsitektur atau fitur.*
+*Dokumen ini diperbarui pada 8 September 2026 setelah UI Redesign Modern Bold. Update dokumen ini setiap kali ada perubahan signifikan pada arsitektur, UI, atau fitur.*

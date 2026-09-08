@@ -1,0 +1,64 @@
+services:
+
+  # ── PostgreSQL Database ─────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: renot_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: renot
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d renot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Laravel + Vue App ──────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: renot_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      APP_NAME: ReNot
+      APP_ENV: production
+      APP_DEBUG: false
+      APP_URL: http://127.0.0.1:8000
+      APP_KEY: base64:rIcZT+YpVXw24Gn/2GHcXkvk/rKEOlSOrX1EaSKe6QQ=
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: renot
+      DB_USERNAME: root
+      DB_PASSWORD: root
+
+      CACHE_DRIVER: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: error
+    volumes:
+      - storage_public:/var/www/html/storage/app/public
+      - storage_logs:/var/www/html/storage/logs
+
+volumes:
+  pgdata:
+    driver: local
+  storage_public:
+    driver: local
+  storage_logs:
+    driver: local

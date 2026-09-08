@@ -6,16 +6,51 @@
 @theme {
     --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
-    /* ReNot Design Tokens — PHILOSOPHY.md */
-    --color-renot-bg: #F8F8F7;
+    /* ReNot Design Tokens — PHILOSOPHY.md v1.1 (Modern Bold) */
+    --color-renot-bg: #F0F0EE;
     --color-renot-surface: #FFFFFF;
     --color-renot-border: #E5E7EB;
+
+    /* Pertamina Brand — Blue */
     --color-renot-primary: #006CB8;
     --color-renot-primary-hover: #005a9e;
+    --color-renot-primary-light: #EFF6FF;
+    --color-renot-primary-tint: #DBEAFE;
+
+    /* Pertamina Brand — Red */
     --color-renot-danger: #ED1B2F;
     --color-renot-danger-hover: #c8102e;
+    --color-renot-danger-light: #FEE2E2;
 
+    /* Pertamina Brand — Lime (aktif, success) */
+    --color-renot-accent: #ACC42A;
+    --color-renot-accent-hover: #94a81d;
+    --color-renot-accent-light: #ECFCCB;
+    --color-renot-accent-tint: #F7FEE7;
+
+    /* Status Semantik */
+    --color-renot-amber: #D97706;
+    --color-renot-amber-light: #FEF3C7;
+    --color-renot-pink: #DB2777;
+    --color-renot-pink-light: #FCE7F3;
+    --color-renot-gray-status: #6B7280;
+    --color-renot-gray-status-light: #F3F4F6;
+
+    /* Text */
     --color-renot-text-heading: #111827;
     --color-renot-text-body: #374151;
     --color-renot-text-muted: #6B7280;
+    --color-renot-text-disabled: #9CA3AF;
+}
+
+/* Card dengan elevasi — terlihat jelas di atas background putih */
+.card-elevated {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+.card-elevated:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
