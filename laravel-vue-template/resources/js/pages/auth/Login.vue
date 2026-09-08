@@ -30,7 +30,66 @@
         </div>
 
         <!-- ── Panel Kanan 30% — Form Login ────────────────────── -->
-        <div class="w-full lg:w-[30%] flex flex-col min-h-screen bg-white">
+        <div class="w-full lg:w-[30%] flex flex-col min-h-screen bg-white relative">
+
+            <!-- FAQ / Help button pojok kanan atas -->
+            <div class="absolute top-5 right-5" data-help>
+                <a
+                    href="#"
+                    @click.prevent="showHelp = !showHelp"
+                    class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+                    style="border-color: #E5E7EB; color: #6B7280;"
+                    title="Bantuan"
+                    data-help
+                >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Bantuan
+                </a>
+
+                <!-- Dropdown bantuan -->
+                <div
+                    v-if="showHelp"
+                    class="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg border shadow-md p-4 z-10"
+                    style="border-color: #E5E7EB;"
+                    data-help
+                >
+                    <h4 class="text-sm font-semibold mb-3" style="color: #111827;">Butuh bantuan?</h4>
+                    <ul class="space-y-2.5">
+                        <li class="flex items-start gap-2.5">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #006CB8;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            <div>
+                                <p class="text-xs font-medium" style="color: #374151;">Akun baru?</p>
+                                <p class="text-xs" style="color: #6B7280;">Hubungi admin untuk pendaftaran akun.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #006CB8;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                            </svg>
+                            <div>
+                                <p class="text-xs font-medium" style="color: #374151;">Lupa password?</p>
+                                <p class="text-xs" style="color: #6B7280;">Klik "Lupa password?" di bawah kolom kata sandi.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #006CB8;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <div>
+                                <p class="text-xs font-medium" style="color: #374151;">Kontak admin</p>
+                                <p class="text-xs" style="color: #6B7280;">admin@renot.app</p>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="mt-3 pt-3 border-t" style="border-color: #F3F4F6;">
+                        <p class="text-[10px]" style="color: #9CA3AF;">ReNot v1.0 — PT Pertamina (Persero)</p>
+                    </div>
+                </div>
+            </div>
 
             <!-- Konten utama — vertikal center -->
             <div class="flex-1 flex flex-col justify-center px-8 xl:px-12 py-12">
@@ -156,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -167,7 +226,17 @@ const form         = ref({ email: '', password: '' });
 const isLoading    = ref(false);
 const errorMessage = ref('');
 const showPassword = ref(false);
+const showHelp     = ref(false);
 const currentYear  = new Date().getFullYear();
+
+// Tutup dropdown saat klik di luar
+function handleClickOutside(e) {
+    if (!e.target.closest('[data-help]')) {
+        showHelp.value = false;
+    }
+}
+onMounted(() => document.addEventListener('click', handleClickOutside));
+onUnmounted(() => document.removeEventListener('click', handleClickOutside));
 
 async function handleLogin() {
     isLoading.value    = true;

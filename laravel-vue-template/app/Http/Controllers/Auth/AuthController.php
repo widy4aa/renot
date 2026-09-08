@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -119,7 +120,7 @@ class AuthController extends Controller
             'role' => $user->role,
             'employee_number' => $user->employee_number,
             'phone' => $user->phone,
-            'avatar' => $user->avatar,
+            'avatar' => $user->avatar ? Storage::url($user->avatar) : null,
             'department' => $user->department?->only('id', 'name'),
         ];
     }
