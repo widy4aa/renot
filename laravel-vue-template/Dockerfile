@@ -1,4 +1,10 @@
 # ─────────────────────────────────────────────────────────────
+# Stage 0 — Composer (dijadikan named stage agar podman-compose
+#            bisa resolve COPY --from)
+# ─────────────────────────────────────────────────────────────
+FROM composer:2 AS composer
+
+# ─────────────────────────────────────────────────────────────
 # Stage 1 — Node: build frontend assets (Vue + Tailwind)
 # ─────────────────────────────────────────────────────────────
 FROM node:22-alpine AS node-builder
@@ -49,8 +55,8 @@ RUN docker-php-ext-configure gd \
         opcache \
         pcntl
 
-# Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Composer — dari named stage (bukan image eksternal langsung)
+COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
