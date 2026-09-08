@@ -1,0 +1,298 @@
+// ReNot - Reminder & Notification Sertifikasi Pegawai
+// Database Diagram v1.0
+// Berdasarkan SRS v1.1
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+Enum user_role {
+  admin
+  pegawai
+}
+
+Enum document_status {
+  pending_approval  // Baru diupload pegawai, menunggu review
+  ditolak           // Ditolak admin
+  aktif             // Approved & kadaluarsa > H+60
+  segera_expired    // Approved & kadaluarsa <= H+60
+  expired           // Approved & kadaluarsa < hari ini
+}
+
+Enum certification_category {
+  hsse
+  aviasi
+}
+
+Enum notification_type {
+  reminder_akan_expired   // H-60 s/d H-1
+  dokumen_expired         // Hari kadaluarsa sudah lewat
+  dokumen_pending         // Ada dokumen baru menunggu review (untuk admin)
+  dokumen_approved        // Dokumen disetujui (untuk pegawai)
+  dokumen_ditolak         // Dokumen ditolak (untuk pegawai)
+}
+
+Enum notification_channel {
+  in_app
+  email
+}
+
+Enum activity_type {
+  login
+  logout
+  dokumen_upload
+  dokumen_edit
+  dokumen_hapus
+  dokumen_approve
+  dokumen_tolak
+  dokumen_ganti_file
+  pegawai_tambah
+  pegawai_edit
+  pegawai_hapus
+  pegawai_nonaktifkan
+}
+
+Enum reminder_urgency {
+  rendah
+  sedang
+  tinggi
+  sangat_tinggi
+}
+
+// ============================================================
+// CORE TABLES
+// ============================================================
+
+Table departments {
+  id            bigint      [pk, increment]
+  name          varchar(100) [not null, unique, note: "Nama departemen/divisi"]
+  created_at    timestamp   [default: `now()`]
+  updated_at    timestamp   [default: `now()`]
+}
+
+Table users {
+  id              bigint       [pk, increment]
+  employee_number varchar(50)  [null, unique, note: "Nomor pegawai — hanya untuk role pegawai, null untuk admin"]
+  name            varchar(255) [not null]
+  email           varchar(255) [not null, unique]
+  password        varchar(255) [not null]
+  role            user_role    [not null, default: "pegawai"]
+  phone           varchar(20)  [null, note: "Nomor HP untuk notifikasi"]
+  avatar          varchar(255) [null, note: "Path foto profil"]
+  department_id   bigint       [null, ref: > departments.id, note: "Null untuk admin"]
+  is_active       boolean      [not null, default: true]
+  email_verified_at timestamp  [null]
+  remember_token  varchar(100) [null]
+  created_at      timestamp    [default: `now()`]
+  updated_at      timestamp    [default: `now()`]
+  created_by      bigint       [null, ref: > users.id, note: "Admin yang mendaftarkan"]
+
+  indexes {
+    employee_number
+  }
+
+  Note: "Satu tabel untuk admin dan pegawai, dibedakan via kolom role"
+}
+
+Table password_reset_tokens {
+  email         varchar(255) [pk]
+  token         varchar(255) [not null]
+  created_at    timestamp    [null]
+
+  Note: "Untuk fitur lupa password via email"
+}
+
+// ============================================================
+// SERTIFIKASI
+// ============================================================
+
+Table certification_categories {
+  id            bigint      [pk, increment]
+  name          varchar(100) [not null, unique]
+  slug          certification_category [not null, unique, note: "hsse | aviasi"]
+  is_deletable  boolean     [not null, default: false, note: "false = kategori utama, tidak bisa dihapus"]
+  created_at    timestamp   [default: `now()`]
+  updated_at    timestamp   [default: `now()`]
+}
+
+Table certification_types {
+  id            bigint      [pk, increment]
+  category_id   bigint      [not null, ref: > certification_categories.id]
+  name          varchar(100) [not null, note: "GSI, SI, AT, RDS, PACE, dll"]
+  code          varchar(50)  [null]
+  is_active     boolean     [not null, default: true]
+  created_at    timestamp   [default: `now()`]
+  updated_at    timestamp   [default: `now()`]
+
+  indexes {
+    (category_id, name) [unique]
+  }
+}
+
+// ============================================================
+// DOKUMEN / SERTIFIKASI PEGAWAI
+// ============================================================
+
+Table documents {
+  id                    bigint      [pk, increment]
+  user_id               bigint      [not null, ref: > users.id, note: "Pemilik dokumen (pegawai)"]
+  certification_type_id bigint      [not null, ref: > certification_types.id]
+  certificate_number    varchar(100) [null, note: "Nomor sertifikat"]
+  implementation_date   date        [null, note: "Tanggal pelaksanaan/ujian"]
+  issued_date           date        [null, note: "Tanggal terbit"]
+  expiry_date           date        [not null, note: "Tanggal kadaluarsa — wajib untuk reminder"]
+  file_path             varchar(255) [null, note: "Path file sertifikat yang sedang aktif"]
+  file_name             varchar(255) [null, note: "Nama file asli"]
+  file_size             integer     [null, note: "Ukuran file dalam bytes"]
+  file_mime             varchar(100) [null, note: "MIME type file"]
+  status                document_status [not null, default: "pending_approval"]
+  rejection_reason      text        [null, note: "Diisi admin jika status = ditolak"]
+  approved_by           bigint      [null, ref: > users.id, note: "Admin yang approve/tolak"]
+  approved_at           timestamp   [null]
+  uploaded_by           bigint      [not null, ref: > users.id, note: "Siapa yang upload (bisa admin atau pegawai sendiri)"]
+  created_at            timestamp   [default: `now()`]
+  updated_at            timestamp   [default: `now()`]
+
+  indexes {
+    user_id
+    status
+    expiry_date
+    certification_type_id
+  }
+
+  Note: "Dokumen yang diinput admin langsung aktif. Dokumen yang diupload pegawai masuk pending_approval."
+}
+
+// ============================================================
+// NOTIFIKASI
+// ============================================================
+
+Table notifications {
+  id            bigint      [pk, increment]
+  user_id       bigint      [not null, ref: > users.id, note: "Penerima notifikasi"]
+  document_id   bigint      [null, ref: > documents.id, note: "Null untuk notifikasi umum"]
+  type          notification_type [not null]
+  channel       notification_channel [not null]
+  title         varchar(255) [not null]
+  body          text        [not null]
+  is_read       boolean     [not null, default: false]
+  read_at       timestamp   [null]
+  sent_at       timestamp   [null, note: "Waktu pengiriman (email/in-app)"]
+  created_at    timestamp   [default: `now()`]
+
+  indexes {
+    user_id
+    (user_id, is_read)
+    document_id
+  }
+}
+
+// ============================================================
+// REMINDER SCHEDULE
+// ============================================================
+
+Table reminder_schedules {
+  id            bigint      [pk, increment]
+  days_before   integer     [not null, note: "Berapa hari sebelum kadaluarsa (60, 45, 30, ...)"]
+  urgency       reminder_urgency [not null]
+  is_active     boolean     [not null, default: true]
+  created_at    timestamp   [default: `now()`]
+  updated_at    timestamp   [default: `now()`]
+
+  indexes {
+    days_before [unique]
+  }
+
+  Note: "Dapat dikonfigurasi oleh Admin. Default: H-60, H-45, H-30, H-20, H-10, H-7..H-1"
+}
+
+Table reminder_logs {
+  id                    bigint      [pk, increment]
+  document_id           bigint      [not null, ref: > documents.id]
+  reminder_schedule_id  bigint      [not null, ref: > reminder_schedules.id]
+  sent_at               timestamp   [not null, default: `now()`]
+
+  indexes {
+    (document_id, reminder_schedule_id) [unique, note: "Mencegah kirim duplikat reminder yang sama"]
+  }
+
+  Note: "Mencatat reminder yang sudah terkirim agar tidak terkirim dua kali"
+}
+
+// ============================================================
+// EMAIL TEMPLATE
+// ============================================================
+
+Table email_templates {
+  id            bigint      [pk, increment]
+  type          notification_type [not null, unique]
+  subject       varchar(255) [not null]
+  body          text        [not null, note: "HTML template dengan placeholder: {Nama Pegawai}, {Nama Sertifikasi}, dll"]
+  placeholders  text        [null, note: "JSON array daftar placeholder yang tersedia"]
+  updated_by    bigint      [null, ref: > users.id, note: "Admin terakhir yang mengedit"]
+  created_at    timestamp   [default: `now()`]
+  updated_at    timestamp   [default: `now()`]
+
+  Note: "Template email per jenis notifikasi, bisa diedit admin dari UI"
+}
+
+// ============================================================
+// PENGATURAN UPLOAD FILE
+// ============================================================
+
+Table system_settings {
+  id            bigint      [pk, increment]
+  key           varchar(100) [not null, unique]
+  value         text        [not null]
+  description   varchar(255) [null]
+  updated_by    bigint      [null, ref: > users.id]
+  updated_at    timestamp   [default: `now()`]
+
+  Note: "Key-value store untuk pengaturan sistem. Contoh key: max_file_size_mb, allowed_file_types"
+}
+
+// ============================================================
+// AUDIT TRAIL
+// ============================================================
+
+Table activity_logs {
+  id            bigint      [pk, increment]
+  user_id       bigint      [null, ref: > users.id, note: "Siapa yang melakukan aksi. Null jika sistem (scheduled job)"]
+  activity_type activity_type [not null]
+  subject_type  varchar(100) [null, note: "Model yang terdampak, misal: App\\Models\\Document"]
+  subject_id    bigint      [null, note: "ID record yang terdampak"]
+  description   text        [null, note: "Penjelasan singkat aksi"]
+  old_values    jsonb       [null, note: "Nilai sebelum perubahan (untuk edit)"]
+  new_values    jsonb       [null, note: "Nilai setelah perubahan (untuk edit)"]
+  ip_address    varchar(45) [null]
+  user_agent    text        [null]
+  created_at    timestamp   [default: `now()`]
+
+  indexes {
+    user_id
+    activity_type
+    (subject_type, subject_id)
+    created_at
+  }
+}
+
+// ============================================================
+// SANCTUM / API TOKENS
+// ============================================================
+
+Table personal_access_tokens {
+  id            bigint      [pk, increment]
+  tokenable_type varchar(255) [not null]
+  tokenable_id  bigint      [not null]
+  name          varchar(255) [not null]
+  token         varchar(64)  [not null, unique]
+  abilities     text        [null]
+  last_used_at  timestamp   [null]
+  expires_at    timestamp   [null]
+  created_at    timestamp   [default: `now()`]
+  updated_at    timestamp   [default: `now()`]
+
+  indexes {
+    (tokenable_type, tokenable_id)
+  }
+}

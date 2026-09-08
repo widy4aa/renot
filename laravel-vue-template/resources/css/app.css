@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* ReNot Design Tokens — PHILOSOPHY.md */
+    --color-renot-bg: #F8F8F7;
+    --color-renot-surface: #FFFFFF;
+    --color-renot-border: #E5E7EB;
+    --color-renot-primary: #006CB8;
+    --color-renot-primary-hover: #005a9e;
+    --color-renot-danger: #ED1B2F;
+    --color-renot-danger-hover: #c8102e;
+
+    --color-renot-text-heading: #111827;
+    --color-renot-text-body: #374151;
+    --color-renot-text-muted: #6B7280;
+}
