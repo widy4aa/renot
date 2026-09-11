@@ -2,12 +2,12 @@
 # Stage 0 — Composer (dijadikan named stage agar podman-compose
 #            bisa resolve COPY --from)
 # ─────────────────────────────────────────────────────────────
-FROM composer:2 AS composer
+FROM docker.io/composer:2 AS composer
 
 # ─────────────────────────────────────────────────────────────
 # Stage 1 — Node: build frontend assets (Vue + Tailwind)
 # ─────────────────────────────────────────────────────────────
-FROM node:22-alpine AS node-builder
+FROM docker.io/node:22-alpine AS node-builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN npm run build
 # ─────────────────────────────────────────────────────────────
 # Stage 2 — PHP: app image (php-fpm + nginx + extensions)
 # ─────────────────────────────────────────────────────────────
-FROM php:8.3-fpm-alpine AS app
+FROM docker.io/php:8.3-fpm-alpine AS app
 
 # Sistem dependencies
 RUN apk add --no-cache \

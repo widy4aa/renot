@@ -257,6 +257,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useFaq } from '@/composables/useFaq.js';
 import { useAuthStore } from '@/stores/auth';
 import axios from 'axios';
 
@@ -347,4 +348,10 @@ async function savePassword() {
 }
 
 onMounted(fetchProfile);
+
+useFaq([
+    { q: 'Cara mengganti foto profil?', a: 'Klik ikon kamera yang muncul saat hover di foto profil kamu, lalu pilih file gambar (JPG atau PNG, maks 2MB). Foto akan langsung diperbarui.', icon: 'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z' },
+    { q: 'Data apa saja yang bisa diedit?', a: 'Kamu hanya bisa mengubah nomor HP dan foto profil. Nama, email, NIP, dan departemen dikelola oleh admin HR — hubungi HR jika ada yang perlu diubah.', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+    { q: 'Cara mengganti password?', a: 'Isi form di bagian "Keamanan Akun" di sebelah kanan. Masukkan password lama, lalu password baru minimal 8 karakter, dan konfirmasi password baru.', icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
+]);
 </script>

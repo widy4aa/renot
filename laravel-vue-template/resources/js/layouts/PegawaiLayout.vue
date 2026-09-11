@@ -15,6 +15,7 @@
             <!-- Sidebar vertikal kiri -->
             <AppSidebar
                 :menu-groups="menuGroups"
+                :faqs="pageFaqs"
                 :user="auth.user"
                 profile-route="pegawai.profile"
                 @logout="handleLogout"

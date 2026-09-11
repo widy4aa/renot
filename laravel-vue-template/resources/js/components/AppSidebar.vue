@@ -1,6 +1,6 @@
 <template>
     <aside
-        class="sidebar flex flex-col overflow-hidden shrink-0"
+        class="sidebar flex flex-col shrink-0"
         :class="collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'"
         style="background:#ED1B2F; border-radius:16px; position:sticky; top:12px; height:calc(100vh - 90px);"
     >
@@ -71,19 +71,19 @@
         </nav>
 
         <!-- ── Divider ────────────────────────────────────── -->
-        <div class="mx-3 h-px" style="background:rgba(255,255,255,0.15);"></div>
+        <div class="mx-3 h-px shrink-0" style="background:rgba(255,255,255,0.15);"></div>
 
         <!-- ── Bottom: FAQ + Profil + Logout ─────────────── -->
-        <div class="px-2.5 py-3 space-y-0.5">
+        <div class="px-2.5 py-3 space-y-0.5 shrink-0">
 
             <!-- FAQ toggle -->
             <button
                 @click="showFaq = !showFaq"
-                class="nav-item w-full flex items-center rounded-xl transition-all duration-150 nav-default"
-                :class="collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'"
+                class="nav-item w-full flex items-center rounded-xl transition-all duration-150"
+                :class="[showFaq ? 'nav-active' : 'nav-default', collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2']"
                 :title="collapsed ? 'Bantuan' : ''"
             >
-                <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 icon-default">
+                <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" :class="showFaq ? 'icon-active' : 'icon-default'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -128,43 +128,87 @@
             </button>
         </div>
 
-        <!-- ── FAQ Panel (slide up dari bawah sidebar) ────── -->
-        <Transition
-            enter-active-class="transition-all duration-200 ease-out"
-            enter-from-class="opacity-0 translate-y-2"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition-all duration-150 ease-in"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-2"
+    </aside>
+
+    <!-- ── FAQ Modal Popup ───────────────────────────────── -->
+    <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+    >
+        <div
+            v-if="showFaq"
+            class="fixed inset-0 z-50 flex items-center justify-center"
+            style="background:rgba(0,0,0,0.35); backdrop-filter:blur(4px);"
+            @click.self="showFaq = false"
         >
-            <div
-                v-if="showFaq"
-                class="absolute bottom-full left-0 right-0 mb-2 rounded-2xl overflow-hidden"
-                style="background:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.15); border:1px solid #E5E7EB; z-index:20;"
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="opacity-0 scale-95 translate-y-2"
+                enter-to-class="opacity-100 scale-100 translate-y-0"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100 scale-100 translate-y-0"
+                leave-to-class="opacity-0 scale-95 translate-y-2"
             >
-                <div class="px-4 py-3" style="border-bottom:1px solid #F3F4F6;">
-                    <p class="text-xs font-bold tracking-widest uppercase" style="color:#ED1B2F;">Bantuan & FAQ</p>
-                </div>
-                <div v-for="faq in faqs" :key="faq.q" class="px-4 py-3.5" style="border-bottom:1px solid #F9FAFB;">
-                    <div class="flex items-start gap-3">
-                        <div class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style="background:#FEE2E2;">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#ED1B2F;">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="faq.icon"/>
-                            </svg>
+                <div
+                    v-if="showFaq"
+                    class="bg-white rounded-2xl overflow-hidden w-full max-w-sm mx-4"
+                    style="box-shadow:0 20px 60px rgba(0,0,0,0.20), 0 4px 16px rgba(0,0,0,0.10);"
+                >
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid #F3F4F6; background:#FAFAFA;">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#FEE2E2;">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#ED1B2F;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-bold" style="color:#111827;">Bantuan & FAQ</p>
                         </div>
-                        <div>
-                            <p class="text-xs font-semibold" style="color:#111827;">{{ faq.q }}</p>
-                            <p class="text-xs mt-0.5 leading-relaxed" style="color:#6B7280;">{{ faq.a }}</p>
+                        <button
+                            @click="showFaq = false"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                            style="color:#6B7280;"
+                            onmouseover="this.style.background='#F3F4F6'"
+                            onmouseout="this.style.background='transparent'"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <!-- FAQ Items -->
+                    <div class="overflow-y-auto" style="max-height:360px;">
+                        <div
+                            v-for="faq in displayFaqs"
+                            :key="faq.q"
+                            class="px-5 py-4"
+                            style="border-bottom:1px solid #F3F4F6;"
+                        >
+                            <div class="flex items-start gap-3">
+                                <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style="background:#FEE2E2;">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#ED1B2F;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="faq.icon"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold" style="color:#111827;">{{ faq.q }}</p>
+                                    <p class="text-xs mt-1 leading-relaxed" style="color:#6B7280;">{{ faq.a }}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    <!-- Footer -->
+                    <div class="px-5 py-3" style="background:#FAFAFA; border-top:1px solid #F3F4F6;">
+                        <p class="text-[10px]" style="color:#9CA3AF;">ReNot · PT Pertamina (Persero)</p>
+                    </div>
                 </div>
-                <div class="px-4 py-2.5" style="background:#FAFAFA;">
-                    <p class="text-[10px]" style="color:#9CA3AF;">ReNot · PT Pertamina (Persero)</p>
-                </div>
-            </div>
-        </Transition>
-
-    </aside>
+            </Transition>
+        </div>
+    </Transition>
 
     <!-- ── Modal Konfirmasi Logout ────────────────────────── -->
     <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
@@ -191,13 +235,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 const props = defineProps({
     menuGroups:   { type: Array,  required: true },
     user:         { type: Object, default: null },
     profileRoute: { type: String, default: null },
+    faqs:         { type: Array,  default: null },
 });
 
 const emit = defineEmits(['logout', 'width-change']);
@@ -229,11 +274,12 @@ function isActiveRoute(name) {
     return route.name === name;
 }
 
-const faqs = [
+const defaultFaqs = [
     { q: 'Cara upload dokumen baru?', a: 'Klik "Upload Dokumen" di Dashboard, isi formulir dan lampirkan file sertifikat.', icon: 'M12 4v16m8-8H4' },
     { q: 'Kapan reminder dikirim?', a: 'Sistem kirim notifikasi H-60, H-45, H-30, H-14, H-7, dan H-1 sebelum kadaluarsa.', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     { q: 'Dokumen ditolak, apa yang dilakukan?', a: 'Baca alasan penolakan di detail dokumen, lalu edit dan upload ulang file yang sesuai.', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
 ];
+const displayFaqs = computed(() => props.faqs ?? defaultFaqs);
 </script>
 
 <style scoped>

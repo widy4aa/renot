@@ -318,6 +318,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useFaq } from '@/composables/useFaq.js';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers.js';
@@ -420,4 +421,10 @@ async function deleteDocument() {
 }
 
 onMounted(fetchDocument);
+
+useFaq([
+    { q: 'Cara download file sertifikat?', a: 'Klik tombol "Download" di panel kanan. File akan terunduh langsung ke perangkat kamu dengan nama file aslinya.', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
+    { q: 'Cara mengedit dokumen ini?', a: 'Klik tombol "Edit Dokumen" di kanan atas. Setelah diedit, dokumen akan kembali ke status Pending Approval untuk diverifikasi ulang oleh admin.', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+    { q: 'Dokumen saya ditolak, kenapa?', a: 'Baca alasan penolakan yang tertera di halaman ini. Biasanya karena file tidak jelas, data tidak sesuai, atau masa berlaku tidak valid. Edit dan upload ulang untuk mengajukan kembali.', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
+]);
 </script>

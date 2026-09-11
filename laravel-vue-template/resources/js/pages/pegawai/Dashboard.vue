@@ -250,23 +250,23 @@
                 </div>
 
                 <!-- List dokumen terakhir -->
-                <ul v-else class="flex-1 divide-y" style="divide-color:#F9FAFB;">
+                <ul v-else class="flex-1">
                     <li
                         v-for="doc in recentDocs"
                         :key="doc.id"
-                        class="px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
+                        class="doc-row px-5 py-3.5 cursor-pointer"
                         @click="goToDetail(doc.id)"
                     >
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
-                                <p class="text-sm font-bold truncate" style="color:#111827;">
+                                <p class="text-sm font-semibold truncate" style="color:#111827;">
                                     {{ doc.certification_type?.name ?? '—' }}
                                 </p>
-                                <p class="text-xs mt-0.5 truncate font-semibold" style="color:#6B7280;">
+                                <p class="text-xs mt-0.5 truncate" style="color:#6B7280;">
                                     {{ doc.certification_type?.category?.name ?? '—' }}
                                 </p>
                             </div>
-                            <!-- Status dot -->
+                            <!-- Status badge -->
                             <span
                                 class="shrink-0 mt-0.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                                 :style="statusStyle(doc.status)"
@@ -275,7 +275,7 @@
                             </span>
                         </div>
                         <!-- Expiry -->
-                        <p class="text-xs mt-1.5 flex items-center gap-1 font-semibold" style="color:#6B7280;">
+                        <p class="text-xs mt-1.5 flex items-center gap-1" style="color:#9CA3AF;">
                             <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
@@ -363,6 +363,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useFaq } from '@/composables/useFaq.js';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import axios from 'axios';
@@ -482,6 +483,12 @@ function timeAgo(dateString) {
 }
 
 onMounted(fetchDashboard);
+
+useFaq([
+    { q: 'Cara membaca stat card?', a: 'Setiap card menampilkan jumlah dokumen berdasarkan statusnya. Klik card untuk melihat daftar dokumen dengan filter status tersebut.', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+    { q: 'Apa itu dokumen "Segera Expired"?', a: 'Dokumen yang masa berlakunya kurang dari 60 hari. Segera hubungi supervisor untuk memperpanjang sertifikasi.', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { q: 'Cara upload dokumen baru?', a: 'Klik tombol "Upload Dokumen" di bagian Quick Actions, lalu isi formulir dan lampirkan file sertifikat (JPG, PNG, atau PDF).', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' },
+]);
 </script>
 
 <style scoped>
@@ -500,4 +507,10 @@ onMounted(fetchDashboard);
 .notif-row:last-child { border-bottom: none; }
 .notif-row:hover { background: #F9FAFB; }
 .notif-row-unread { background: #FFFBFB; border-left: 3px solid #ED1B2F; padding-left: calc(1.25rem - 3px); }
+.doc-row {
+    border-bottom: 1px solid #F3F4F6;
+    transition: background 150ms;
+}
+.doc-row:last-child { border-bottom: none; }
+.doc-row:hover { background: #F9FAFB; }
 </style>

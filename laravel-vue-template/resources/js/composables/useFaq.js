@@ -1,18 +1,23 @@
-import { inject, onUnmounted } from 'vue';
+import { inject, onMounted, onUnmounted } from 'vue';
 
 /**
  * Composable untuk set FAQ kontekstual per halaman.
- * Halaman memanggil setFaqs([...]) saat onMounted.
- * FAQ otomatis di-reset saat halaman di-unmount.
+ * Gunakan: useFaq([...items]) — FAQ otomatis di-set saat onMounted
+ * dan di-reset saat halaman di-unmount.
  */
-export function useFaq() {
+export function useFaq(faqs = null) {
     const setPageFaqs = inject('setPageFaqs', null);
 
-    function setFaqs(faqs) {
-        if (setPageFaqs) setPageFaqs(faqs);
+    function setFaqs(items) {
+        if (setPageFaqs) setPageFaqs(items);
     }
 
-    // Reset ke FAQ default saat komponen di-unmount
+    if (faqs) {
+        onMounted(() => {
+            if (setPageFaqs) setPageFaqs(faqs);
+        });
+    }
+
     onUnmounted(() => {
         if (setPageFaqs) setPageFaqs(null);
     });
