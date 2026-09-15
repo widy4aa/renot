@@ -1,22 +1,31 @@
 <template>
-    <!-- Background utama -->
     <div class="min-h-screen flex flex-col p-3 gap-3" style="background:#F2F2F0;">
 
         <!-- Topbar full width -->
         <AppTopbar
             :user="auth.user"
+            :unread-count="unreadCount"
+            notif-route="admin.notifikasi"
+            @notif-read="unreadCount = $event"
         />
 
         <!-- Area bawah: sidebar kiri + konten -->
-        <div class="flex gap-3 flex-1 relative">
+        <div class="flex gap-3 flex-1">
 
-            <!-- Sidebar vertikal kiri -->
+            <!-- Sidebar vertikal kiri (fixed, scroll-aware) -->
+            <!-- topbarOffset = h-14(56) + p-3 wrapper top(12) + gap-3(12) = 80px -->
             <AppSidebar
                 :menu-groups="menuGroups"
+                :faqs="pageFaqs"
                 :user="auth.user"
                 profile-route="admin.profile"
+                :topbar-offset="80"
                 @logout="handleLogout"
+                @width-change="sidebarWidth = $event"
             />
+
+            <!-- Spacer yang mengikuti lebar sidebar -->
+            <div class="shrink-0 transition-all duration-200" :style="{ width: sidebarWidth + 'px' }"></div>
 
             <!-- Konten halaman -->
             <main class="flex-1 min-w-0">
@@ -28,13 +37,31 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
+import { ref, provide, onMounted } from 'vue';import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import axios from 'axios';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppTopbar from '@/components/AppTopbar.vue';
 
 const auth   = useAuthStore();
 const router = useRouter();
+
+const unreadCount = ref(0);
+const sidebarWidth = ref(64); // default collapsed
+
+// ── FAQ dinamis per halaman ────────────────────────────
+const pageFaqs = ref(null);
+provide('setPageFaqs', (faqs) => { pageFaqs.value = faqs; });
+
+// ── Notifikasi unread count ────────────────────────────
+async function fetchUnreadCount() {
+    try {
+        const { data } = await axios.get('/api/admin/notifications');
+        unreadCount.value = data.unread_count;
+    } catch {
+        unreadCount.value = 0;
+    }
+}
 
 const menuGroups = [
     {
@@ -59,6 +86,12 @@ const menuGroups = [
                 name: 'admin.approval',
                 label: 'Approval',
                 icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+            },
+            {
+                name: 'admin.notifikasi',
+                label: 'Notifikasi',
+                badge: unreadCount,
+                icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`,
             },
             {
                 name: 'admin.pegawai',
@@ -90,6 +123,11 @@ const menuGroups = [
                 label: 'Audit Trail',
                 icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>`,
             },
+            {
+                name: 'admin.management',
+                label: 'Manajemen Admin',
+                icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+            },
         ],
     },
 ];
@@ -98,4 +136,6 @@ async function handleLogout() {
     await auth.logout();
     router.push({ name: 'login' });
 }
+
+onMounted(fetchUnreadCount);
 </script>

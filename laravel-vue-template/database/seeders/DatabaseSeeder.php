@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             CertificationCategorySeeder::class,
             ReminderScheduleSeeder::class,
+            EmailTemplateSeeder::class,
             UserSeeder::class,
             DocumentSeeder::class,
             NotificationSeeder::class,

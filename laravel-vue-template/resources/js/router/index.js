@@ -47,6 +47,81 @@ const router = createRouter({
                     name: 'admin.dashboard',
                     component: () => import('@/pages/admin/Dashboard.vue'),
                 },
+                {
+                    path: 'notifikasi',
+                    name: 'admin.notifikasi',
+                    component: () => import('@/pages/admin/Notifikasi.vue'),
+                },
+                {
+                    path: 'profil',
+                    name: 'admin.profile',
+                    component: () => import('@/pages/admin/Profile.vue'),
+                },
+                {
+                    path: 'dokumen',
+                    name: 'admin.dokumen',
+                    component: () => import('@/pages/admin/Dokumen.vue'),
+                },
+                {
+                    path: 'dokumen/tambah',
+                    name: 'admin.dokumen.tambah',
+                    component: () => import('@/pages/admin/DokumenForm.vue'),
+                },
+                {
+                    path: 'dokumen/:id',
+                    name: 'admin.dokumen.detail',
+                    component: () => import('@/pages/admin/DokumenDetail.vue'),
+                },
+                {
+                    path: 'dokumen/:id/edit',
+                    name: 'admin.dokumen.edit',
+                    component: () => import('@/pages/admin/DokumenForm.vue'),
+                },
+                {
+                    path: 'approval',
+                    name: 'admin.approval',
+                    component: () => import('@/pages/admin/Approval.vue'),
+                },
+                {
+                    path: 'pegawai',
+                    name: 'admin.pegawai',
+                    component: () => import('@/pages/admin/Pegawai.vue'),
+                },
+                {
+                    path: 'pegawai/tambah',
+                    name: 'admin.pegawai.tambah',
+                    component: () => import('@/pages/admin/PegawaiForm.vue'),
+                },
+                {
+                    path: 'pegawai/:id/edit',
+                    name: 'admin.pegawai.edit',
+                    component: () => import('@/pages/admin/PegawaiForm.vue'),
+                },
+                {
+                    path: 'departemen',
+                    name: 'admin.departemen',
+                    component: () => import('@/pages/admin/Departemen.vue'),
+                },
+                {
+                    path: 'kategori',
+                    name: 'admin.kategori',
+                    component: () => import('@/pages/admin/Kategori.vue'),
+                },
+                {
+                    path: 'pengaturan',
+                    name: 'admin.pengaturan',
+                    component: () => import('@/pages/admin/Pengaturan.vue'),
+                },
+                {
+                    path: 'audit',
+                    name: 'admin.audit',
+                    component: () => import('@/pages/admin/Audit.vue'),
+                },
+                {
+                    path: 'admin-management',
+                    name: 'admin.management',
+                    component: () => import('@/pages/admin/ManajemenAdmin.vue'),
+                },
             ],
         },
 

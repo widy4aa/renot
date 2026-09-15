@@ -1,15 +1,17 @@
 # ReNot — Design Philosophy
-**Versi:** 1.1 (Modern Bold)
-**Tanggal:** 8 September 2026
-**Berlaku untuk:** Seluruh halaman dan komponen ReNot
+**Versi:** 2.0 (Modern Bold — Production)
+**Tanggal:** 11 September 2026
+**Berlaku untuk:** Seluruh halaman dan komponen ReNot (role Pegawai & Admin)
 
 ---
 
 ## 0. Mengapa Dokumen Ini Ada
 
-AI tools selalu jatuh ke default yang sama — indigo-500, card grid tiga kolom, Inter, glassmorphism — bukan karena buruk, tapi karena tidak ada yang memberi mereka keputusan sebelumnya. Dokumen ini adalah kumpulan keputusan yang dibuat oleh manusia **sebelum** satu baris kode ditulis. Setiap token di sini punya alasan, bukan tebakan.
+AI tools selalu jatuh ke default yang sama — indigo-500, card grid tiga kolom, Inter, glassmorphism — bukan karena buruk, tapi karena tidak ada yang memberi mereka keputusan sebelumnya. Dokumen ini adalah kumpulan keputusan yang dibuat oleh manusia **sebelum** satu baris kode ditulis, dan diperbarui untuk mencerminkan implementasi yang sudah disetujui client.
 
 > Aturan utama: Jika ada keputusan desain yang tidak ada di dokumen ini, **buat keputusan baru dan tambahkan di sini**. Jangan biarkan AI memilih sendiri.
+
+> **v2.0:** Dokumen ini diperbarui berdasarkan UI role pegawai yang sudah dibangun, diuji, dan disetujui oleh client. Semua keputusan di sini adalah keputusan final — bukan target, tapi kenyataan. UI admin yang dibangun di Sprint 4 mengikuti dokumen ini sepenuhnya.
 
 ---
 
@@ -23,13 +25,13 @@ Tiga kata yang boleh menggambarkan ReNot secara visual:
 
 - **Terpercaya** — user harus yakin data yang ditampilkan adalah data nyata
 - **Jelas** — status dokumen, angka, dan notifikasi tidak boleh ambigu
-- **Tenang** — tidak ada elemen yang berteriak, tidak ada animasi yang tidak perlu
+- **Berani** — warna brand Pertamina dipakai penuh, bukan diencerkan jadi pastel
 
 Tiga kata yang **tidak boleh** menggambarkan ReNot:
 
 - ~~Futuristik~~ — glassmorphism, neon glow, gradient biru-ungu
 - ~~Playful~~ — bounce animation, emoji, warna pastel berlebihan
-- ~~Generic~~ — card grid tiga kolom, indigo-500, hero centered
+- ~~Generic~~ — indigo-500, Inter, hero centered dengan dua tombol
 
 ---
 
@@ -37,14 +39,14 @@ Tiga kata yang **tidak boleh** menggambarkan ReNot:
 
 ### 2.1 Palet Utama
 
-Seluruh UI dibangun dari token warna berikut. Tidak boleh ada warna di luar daftar ini kecuali untuk status semantik (lihat 2.2).
+Seluruh UI dibangun dari token warna berikut. Tidak boleh ada warna di luar daftar ini kecuali untuk status semantik (lihat 2.2) dan derived colors (lihat 2.3).
 
 ```
---color-bg          #F0F0EE   Background halaman utama (warm off-white)
---color-surface     #FFFFFF   Card, modal, panel, sidebar
---color-border      #E5E7EB   Border, divider, garis pemisah
---color-primary     #006CB8   Biru Pertamina — CTA, link, active state, focus ring
---color-danger      #ED1B2F   Merah Pertamina — expired, ditolak, hapus, alert kritis
+--color-bg          #F2F2F0   Background halaman utama (warm off-white)
+--color-surface     #FFFFFF   Card, modal, panel, dropdown
+--color-border      #E2E8F0   Border card, divider, garis pemisah (1.5px)
+--color-primary     #ED1B2F   Merah Pertamina — CTA utama, topbar, sidebar, focus border input
+--color-secondary   #006CB8   Biru Pertamina — CTA sekunder, ghost button, link, badge info
 --color-accent      #ACC42A   Lime Pertamina — status Aktif, badge success
 ```
 
@@ -53,36 +55,48 @@ Seluruh UI dibangun dari token warna berikut. Tidak boleh ada warna di luar daft
 Warna status dokumen adalah bagian dari sistem informasi — bukan dekorasi. Setiap warna punya makna tunggal dan tidak boleh dipakai untuk hal lain.
 
 ```
-Aktif           #ACC42A   Lime Pertamina — dokumen berlaku, aman (warna resmi ketiga Pertamina)
+Aktif           #ACC42A   Lime Pertamina — dokumen berlaku, aman
 Segera Expired  #D97706   Amber — perlu perhatian segera
 Expired         #ED1B2F   Merah Pertamina — kritis, harus diperbarui
 Pending         #6B7280   Abu — menunggu, netral
 Ditolak         #DB2777   Pink-merah — tindakan gagal, perlu diperbaiki
 ```
 
-### 2.3 Text Colors
+### 2.3 Derived Colors (badge & tipe notifikasi)
+
+Warna turunan yang diizinkan untuk konteks badge tipe notifikasi dan chip informational. Tidak boleh dipakai di luar konteks ini.
+
+```
+Badge "Pegawai" role     bg #FEE2E2, color #991B1B
+Badge "Disetujui"        bg #F7FEE7, color #5a6e0f
+Badge "Reminder"         bg #FEF3C7, color #92400E
+Badge "Ditolak" notif    bg #FCE7F3, color #9D174D
+Badge "Expired" notif    bg #FEE2E2, color #991B1B
+Badge "Pending" notif    bg #F3F4F6, color #6B7280
+```
+
+### 2.4 Text Colors
 
 ```
 --color-text-heading    #111827   Judul, label penting
 --color-text-body       #374151   Teks paragraf, isi konten
 --color-text-muted      #6B7280   Placeholder, metadata, timestamp, caption
---color-text-disabled   #9CA3AF   Elemen nonaktif
---color-text-inverse    #FFFFFF   Teks di atas background gelap / primary
+--color-text-disabled   #9CA3AF   Elemen nonaktif, label input (uppercase)
+--color-text-inverse    #FFFFFF   Teks di atas background merah / gelap
 ```
 
-### 2.4 Asal Warna Pertamina
+### 2.5 Asal Warna Pertamina
 
-`#006CB8`, `#ED1B2F`, dan `#ACC42A` diambil langsung dari SVG logo resmi PT Pertamina (Persero) di pertamina.com. Ini bukan interpretasi — ini hex aktual dari aset digital resmi perusahaan.
+`#ED1B2F`, `#006CB8`, dan `#ACC42A` diambil langsung dari SVG logo resmi PT Pertamina (Persero) di pertamina.com. Ini bukan interpretasi — ini hex aktual dari aset digital resmi perusahaan.
 
-`#ACC42A` (Lime Pertamina) mulai digunakan pada versi 1.1 untuk status **Aktif** — menggantikan `#16A34A` (generic green). Konteks penggunaan: badge aktif, angka stat card aktif, accent bar. Tidak boleh digunakan untuk elemen navigasi atau CTA utama.
+Dalam v2.0, **`#ED1B2F` (Merah Pertamina) adalah warna dominan** — digunakan untuk topbar, sidebar, CTA utama, dan focus state input. `#006CB8` tetap dipakai sebagai warna sekunder untuk elemen yang perlu dibedakan dari CTA utama (ghost button, link, badge info).
 
-### 2.5 Yang Dilarang
+### 2.6 Yang Dilarang
 
 - ❌ Gradient apapun (linear, radial, mesh)
 - ❌ `indigo-500` atau turunannya sebagai primary
-- ❌ Warna di luar daftar di atas tanpa keputusan tertulis
-- ❌ Opacity warna sebagai cara menambah varian baru
-- ❌ Warna berbeda untuk role yang sama (sidebar admin dan sidebar pegawai harus sama)
+- ❌ Warna di luar daftar di atas tanpa keputusan tertulis di dokumen ini
+- ❌ Sidebar admin dan sidebar pegawai beda warna — keduanya harus `#ED1B2F`
 
 ---
 
@@ -110,31 +124,49 @@ Tidak ada font kedua. Tidak ada font display, tidak ada font monospace kecuali u
 ### 3.2 Type Scale
 
 ```
-text-xs     12px / 1.5    Label, badge, timestamp, caption
-text-sm     14px / 1.5    Body utama, isi tabel, deskripsi
-text-base   16px / 1.6    Paragraf panjang (jarang dipakai di app)
-text-lg     18px / 1.4    Sub-heading, nama seksi
-text-xl     20px / 1.3    Heading halaman sekunder
-text-2xl    24px / 1.2    Heading halaman utama (H1)
-text-3xl    30px / 1.1    Angka besar di stat card
+text-[10px]   10px / 1.4    Metadata mikro — timestamp ringkas, group label sidebar
+text-xs       12px / 1.5    Label input (uppercase), badge, timestamp, caption
+text-sm       14px / 1.5    Body utama, isi list, deskripsi, nav item sidebar
+text-base     16px / 1.6    Jam live topbar, paragraf sedang
+text-lg       18px / 1.4    Sub-heading, nama seksi
+text-xl       20px / 1.3    Heading halaman sekunder
+text-2xl      24px / 1.2    Heading halaman utama (H1), nama "ReNot" di topbar
+text-3xl      30px / 1.1    Angka total (donut chart, ringkasan)
+text-4xl      36px / 1.0    Angka hitung mundur hari (DayCounter di DokumenDetail)
+text-5xl      48px / 1.0    Angka besar stat card dashboard
 ```
 
 ### 3.3 Weight Convention
 
 ```
-400 Regular    → Body text, deskripsi, teks panjang
-500 Medium     → Label input, navigasi sidebar, badge text
-600 SemiBold   → Sub-heading, nama kolom tabel, tombol
-700 Bold       → Heading halaman, angka stat card, alert title
+400 Regular      → Body text, deskripsi, teks panjang
+500 Medium       → Teks notifikasi unread, item yang perlu sedikit penekanan
+600 SemiBold     → Nav item sidebar, sub-heading, tombol, badge text
+700 Bold         → Heading halaman, label card, nama "ReNot" di topbar, jam live
+800 ExtraBold    → Angka stat card (text-5xl), angka DayCounter (text-4xl)
 ```
 
-### 3.4 Yang Dilarang
+### 3.4 Label Style
 
-- ❌ ALL CAPS untuk konten — hanya boleh untuk label pendek (max 2 kata) dan uppercase dengan letter-spacing
-- ❌ Font size di bawah 12px
+Label input dan label section pendek menggunakan pola berikut:
+
+```
+font-size      : text-xs (12px)
+font-weight    : font-bold (700)
+text-transform : uppercase
+letter-spacing : tracking-wide
+color          : #9CA3AF
+```
+
+Maksimal 2 kata untuk ALL CAPS. Frasa lebih panjang tidak boleh diuppercase.
+
+### 3.5 Yang Dilarang
+
+- ❌ Font size di bawah 10px
 - ❌ Font weight di bawah 400
 - ❌ Italic kecuali untuk quote atau catatan editorial
 - ❌ Font lain selain Plus Jakarta Sans tanpa keputusan tertulis
+- ❌ ALL CAPS untuk frasa lebih dari 2 kata
 
 ---
 
@@ -146,62 +178,79 @@ Mengikuti skala Tailwind (basis 4px). Tidak ada nilai spacing arbitrary.
 
 ```
 4px    →  gap kecil dalam komponen (ikon + teks)
-8px    →  padding internal komponen kecil
-12px   →  padding badge, pill, chip
-16px   →  padding card, gap antar elemen dalam section
-20px   →  padding container sedang
-24px   →  gap antar card, padding section
-32px   →  margin antar section besar
+8px    →  padding internal komponen kecil (p-2)
+10px   →  padding tombol vertikal (py-2.5)
+12px   →  padding outer layout (p-3), gap antar panel
+16px   →  padding card kecil (p-4), gap antar elemen dalam section
+20px   →  padding topbar horizontal (px-5)
+24px   →  padding card utama (px-6, py-5)
+32px   →  margin antar section besar (space-y-6 ≈ 24px, space-y-8 ≈ 32px)
 ```
 
 ### 4.2 Layout
 
 ```
-Sidebar width     : 240px (fixed, tidak collapsible di versi ini)
-Content max-width : tidak ada (full width dalam main area)
-Content padding   : 24px semua sisi
-Header height     : 56px
+Background layout : #F2F2F0
+Outer padding     : p-3 (12px semua sisi)
+Gap antar panel   : gap-3 (12px) — antara topbar↔area bawah, sidebar↔konten
+Topbar height     : h-14 (56px)
+Sidebar collapsed : 64px (default saat pertama load)
+Sidebar expanded  : 220px
+Sidebar transition: width 200ms ease
+Sidebar position  : sticky, top 12px, height calc(100vh - 90px)
+Content area      : flex-1 min-w-0 (full width sisa setelah sidebar)
 ```
 
 ### 4.3 Grid
 
-- **Stat card dashboard**: `grid-cols-2` di mobile, `grid-cols-3` atau `grid-cols-6` di desktop — angka disesuaikan jumlah card, bukan dipaksakan tiga kolom
-- **Form**: Single column, max-width 672px (42rem)
-- **Tabel**: Full width content area
-- ❌ Tidak ada hero section tiga kolom "icon + judul + dua baris teks"
+- **Stat card dashboard**: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3`
+- **Dokumen grid**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4` — diizinkan karena berisi data nyata, bukan marketing card
+- **Dashboard bottom**: `lg:grid-cols-4` — notifikasi (2 col) + sertifikat (1 col) + donut chart (1 col)
+- **Form & Detail**: layout 2 kolom (`lg:grid-cols-5` — 3/5 kiri + 2/5 kanan sticky)
+- ❌ Tidak ada hero section tiga kolom "icon + judul + dua baris teks" untuk keperluan marketing
 
 ---
 
 ## 5. Border Radius
 
-**Satu nilai, konsisten.**
+**Tiga nilai utama, dipakai konsisten per konteks.**
 
 ```
-Radius default   : 8px   (card, input, tombol, modal)
-Radius kecil     : 4px   (badge, tag, chip, tooltip)
-Radius penuh     : 9999px (avatar, toggle, pill status)
+Radius panel besar : 16px (rounded-2xl) — topbar, sidebar, modal, avatar, card header utama
+Radius default     : 12px (rounded-xl)  — card konten (.card-elevated), input, tombol, dropdown panel
+Radius kecil       : 8px  (rounded-lg)  — icon container w-7 h-7 di nav, tab kecil
+Radius penuh       : 9999px (rounded-full) — badge pill status, dot indikator, avatar fallback
 ```
 
-Bukan 12px yang terlalu friendly, bukan 2px yang terlalu kaku. 8px adalah titik tengah yang terasa enterprise tapi tidak dingin.
+Panduan per elemen:
+- Topbar & Sidebar: `border-radius: 16px` (floating dalam `p-3` layout)
+- `.card-elevated`: `border-radius: 12px`
+- Input field: `rounded-xl` (12px)
+- Tombol: `rounded-xl` (12px)
+- Icon container `w-7 h-7` di nav sidebar: `rounded-lg` (8px)
+- Status badge / pill: `rounded-full` (9999px)
+- Modal dialog: `rounded-2xl` (16px)
 
 ---
 
 ## 6. Shadow
 
-**Minimal dan fungsional. Versi Modern Bold menggunakan shadow lebih dalam untuk memperkuat kesan floating.**
+**Minimal dan fungsional. Komponen floating menggunakan shadow yang memperkuat hierarki layer.**
 
 ```
-shadow-none   : Elemen flat — tabel, navigasi inline
-shadow-sm     : Card konten biasa — elevasi standar
-shadow-md     : Dropdown, popover — elemen mengambang
-shadow-lg     : Modal, dialog — layer tertinggi
-shadow-float  : Sidebar, Topbar — 0 4px 20px rgba(0,0,0,0.12), 0 1px 0 rgba(0,0,0,0.04)
-shadow-panel  : Panel besar mengambang — 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)
+.card-elevated       : 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03)
+.card-elevated:hover : 0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)
+Topbar               : 0 2px 16px rgba(237,27,47,0.25), 0 1px 4px rgba(0,0,0,0.08)
+Dropdown panel       : 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)
+Modal / FAQ panel    : 0 8px 32px rgba(0,0,0,0.15)
+Modal overlay        : background rgba(0,0,0,0.40)
 ```
 
-Tidak ada shadow berwarna. Tidak ada neon glow. Tidak ada shadow multiple layered untuk kesan \"depth\" artifisial.
+Topbar menggunakan shadow dengan tint merah (`rgba(237,27,47,0.25)`) — ini disengaja untuk mempertegas bahwa topbar adalah layer brand utama.
 
-Pengecualian Modern Bold: Komponen `floating` (sidebar dan topbar) menggunakan `shadow-float` dan `shadow-panel` yang lebih dalam dari `shadow-sm` standar. Ini bukan dekoratif — ini memperkuat hierarki visual bahwa komponen navigasi berada di layer yang berbeda dari konten.
+Card hover **boleh** menambah shadow secara halus. Ini adalah satu-satunya hover yang mengizinkan perubahan shadow. Stat card dashboard tambahan menggunakan `translateY(-2px)` saat hover.
+
+Tidak ada neon glow. Tidak ada shadow berwarna selain topbar.
 
 ---
 
@@ -210,63 +259,72 @@ Pengecualian Modern Bold: Komponen `floating` (sidebar dan topbar) menggunakan `
 ### 7.1 Tombol
 
 ```
-Primer   → bg #006CB8, text putih, hover bg #005a9e
-Sekunder → bg putih, border #E5E7EB, text #374151, hover bg #F9FAFB
-Bahaya   → bg #ED1B2F, text putih, hover bg #c8102e
-Ghost    → bg transparent, text #006CB8, hover bg #EFF6FF
+Primer   → bg #ED1B2F, text #fff, hover bg #c8102e, rounded-xl, px-4 py-2.5
+Sekunder → .card-elevated + text #374151, rounded-xl, px-4 py-2.5
+Ghost    → bg transparent, text #ED1B2F, hover bg #FEE2E2, rounded-lg
+Link     → text #ED1B2F, no background, inline
 ```
 
-- Ukuran: `px-4 py-2` (default), `px-3 py-1.5` (small)
-- Radius: 8px
-- Font: 14px SemiBold
+- Font: `text-sm font-semibold`
+- Hover state: via `onmouseover`/`onmouseout` inline (konsisten dengan kode yang sudah ada)
+- Ukuran kecil: `px-3 py-1.5`
 - ❌ Tidak ada tombol dengan gradient
 - ❌ Tidak ada pasangan dua tombol ghost bersebelahan di hero
 
 ### 7.2 Card
 
-```
-bg: #FFFFFF
-border: 1px solid #E5E7EB
-border-radius: 8px
-padding: 20px atau 24px
-shadow: shadow-sm
+```css
+/* Global class — WAJIB dipakai, jangan hardcode border/shadow per komponen */
+.card-elevated {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+}
+.card-elevated:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+}
 ```
 
+- Padding standar: `px-6 py-5` (card besar), `p-4` (card stat/kecil), `p-3` (card sangat kecil)
 - ❌ Tidak ada glassmorphism (backdrop-filter: blur)
 - ❌ Tidak ada border berwarna di card biasa (hanya untuk card status khusus)
-- ❌ Tidak ada hover yang mengubah shadow secara dramatis
 
 ### 7.3 Input & Form
 
 ```
-border: 1px solid #D1D5DB
-border-radius: 8px
-padding: 8px 12px
-font-size: 14px
-focus: ring 2px #006CB8, border transparent
-error: border #ED1B2F, ring #ED1B2F
+background    : #F9FAFB
+border        : 1.5px solid #E2E8F0
+border-radius : rounded-xl (12px)
+padding       : px-3 py-2.5 atau px-4 py-2.5
+font-size     : text-sm (14px)
+font-weight   : font-medium
+color         : #111827
+focus         : border-color #ED1B2F (via @focus / @blur JS handler)
+error         : border-color #ED1B2F + pesan merah di bawah
 ```
 
-- Label selalu di atas input, bukan floating label
-- Error message di bawah input, warna `#ED1B2F`, font-size 12px
-- Required field tandai dengan `*` merah, bukan teks "(wajib)"
+- Label: selalu di atas input, `text-xs font-bold uppercase tracking-wide color:#9CA3AF`
+- Error message: di bawah input, `color:#ED1B2F`, `text-xs`
+- Required field: `<span style="color:#ED1B2F">*</span>` — bukan teks "(wajib)"
+- `outline-none` dipakai, focus state via border-color JS handler
 
 ### 7.4 Badge / Status Pill
 
 ```
-border-radius: 9999px (pill)
-padding: 2px 10px
-font-size: 12px
-font-weight: 500
+border-radius : rounded-full (9999px)
+padding       : px-2.5 py-1 (standar), px-2 py-0.5 (kecil), px-1.5 py-0.5 (mikro)
+font-size     : text-xs (12px) standar, text-[10px] untuk badge mikro di topbar
+font-weight   : font-semibold atau font-bold
 ```
 
-Warna mengikuti tabel status semantik di 2.2. Tidak boleh ada badge berwarna di luar daftar itu.
+Warna mengikuti §2.2 untuk status dokumen, atau §2.3 untuk badge tipe notifikasi.
 
 ### 7.5 Tabel
 
 ```
-Header row : bg #F9FAFB, font 12px uppercase tracking-wide, text #6B7280, font-weight 600
-Body row   : bg #FFFFFF, border-bottom 1px #F3F4F6
+Header row : bg #F9FAFB, text-xs uppercase tracking-wide, color #6B7280, font-weight 600
+Body row   : bg #FFFFFF, border-bottom 1px solid #F3F4F6
 Hover row  : bg #F9FAFB
 ```
 
@@ -277,37 +335,79 @@ Hover row  : bg #F9FAFB
 ### 7.6 Sidebar Navigasi
 
 ```
-bg: #FFFFFF
-border-right: 1px solid #E5E7EB
-width: 240px
+bg             : #ED1B2F
+border-radius  : 16px
+width default  : 64px (collapsed — default saat load)
+width expanded : 220px
+transition     : width 200ms ease
+position       : sticky, top: 12px, height: calc(100vh - 90px)
 
-Menu item:
-  default  → text #6B7280, bg transparent
-  hover    → text #111827, bg #F9FAFB
-  active   → text #006CB8, bg #EFF6FF, font-weight 600
-  icon     → 16x16px, stroke, warna sama dengan teks
+Nav item:
+  default  → color rgba(255,255,255,0.85), bg transparent
+  hover    → color #fff, bg rgba(255,255,255,0.12)
+  active   → color #fff, bg rgba(255,255,255,0.20), font-weight 700
+
+Icon container (w-7 h-7, rounded-lg):
+  default  → bg rgba(255,255,255,0.12)
+  hover    → bg rgba(255,255,255,0.22)
+  active   → bg rgba(255,255,255,0.30)
+
+Group label    : text-[10px] uppercase tracking-widest, color rgba(255,255,255,0.50)
+Divider        : bg rgba(255,255,255,0.15), h-px
+
+Badge counter (expanded)  : bg rgba(255,255,255,0.25), color #fff, rounded-full
+Badge dot (collapsed)     : bg #fff, w-2 h-2, rounded-full, absolute top-1 right-1
 ```
 
-- Active indicator: background biru muda `#EFF6FF`, teks biru `#006CB8`
-- Tidak ada indicator garis kiri (left border) — background sudah cukup
-- Badge unread: bg `#ED1B2F`, teks putih, pill kecil
+FAQ panel: muncul di `absolute bottom-full`, background `#fff`, border `#E5E7EB`, `rounded-2xl`, shadow `0 8px 32px rgba(0,0,0,0.15)`.
+
+### 7.7 Topbar
+
+```
+bg             : #ED1B2F
+height         : h-14 (56px)
+border-radius  : 16px
+padding        : px-5
+shadow         : 0 2px 16px rgba(237,27,47,0.25), 0 1px 4px rgba(0,0,0,0.08)
+
+Kiri:
+  - Logo container: w-10 h-10 rounded-xl bg #fff + icon.png h-7 w-7
+  - Teks "ReNot": text-2xl font-bold color #fff
+  - Divider: w-px h-5, bg rgba(255,255,255,0.40)
+  - Teks "Pertamina": text-base font-bold uppercase tracking-widest, color rgba(255,255,255,0.90)
+
+Kanan:
+  - Bell button: w-9 h-9 rounded-xl, hover bg rgba(255,255,255,0.15)
+  - Unread indicator: dot putih w-2 h-2 + animate-ping saat ada notif unread
+  - Divider: w-px h-5, bg rgba(255,255,255,0.30)
+  - Jam live: text-base font-bold tabular-nums color #fff, update setiap detik
+```
+
+Notifikasi dropdown: `w-80 rounded-2xl bg-white`, border `#E5E7EB`, shadow panel (lihat §6). Header `#FAFAFA`, footer `#FAFAFA`.
 
 ---
 
 ## 8. Motion & Animation
 
-**Hampir tidak ada.**
+**Minimal, fungsional, tidak mengejutkan.**
 
 ```
-Transisi warna/border : 150ms ease
-Transisi background   : 150ms ease
-Fade modal masuk      : 200ms ease
-Slide dropdown        : 150ms ease-out
+Transisi warna/border    : 150ms ease
+Transisi background      : 150ms ease
+Transisi shadow card     : 200ms ease (.card-elevated hover)
+Fade modal masuk         : 200ms ease-out
+Fade modal keluar        : 150ms ease-in
+Slide dropdown masuk     : 150ms ease-out (opacity + translateY + scale)
+Slide dropdown keluar    : 100ms ease-in
+Sidebar width            : 200ms ease (collapse/expand)
+Stat card hover          : translateY(-2px) + shadow lebih dalam, 200ms ease
+animate-pulse            : Skeleton loading (Tailwind default)
+animate-ping             : Badge dot notif unread di bell topbar
+animate-spin             : Spinner loading saat fetch async
 ```
 
 - ❌ Tidak ada bounce
 - ❌ Tidak ada spring animation
-- ❌ Tidak ada skeleton pulse yang terlalu mencolok (gunakan subtle opacity 0.5–1)
 - ❌ Tidak ada counter angka yang berputar saat load
 - Selalu hormati `prefers-reduced-motion`
 
@@ -318,16 +418,18 @@ Slide dropdown        : 150ms ease-out
 **Heroicons Outline** — satu set ikon, konsisten.
 
 ```
-Ukuran default : 20x20px (w-5 h-5)
-Ukuran kecil   : 16x16px (w-4 h-4) — di dalam tombol, badge
-Ukuran besar   : 24x24px (w-6 h-6) — ilustrasi state kosong
-Stroke width   : 1.5px (default Heroicons)
-Warna          : Ikut warna teks parent element
+Ukuran nav sidebar   : 16x16px (w-4 h-4) — di dalam icon container w-7 h-7
+Ukuran default       : 20x20px (w-5 h-5) — bell topbar, tombol dengan ikon
+Ukuran medium        : 24x24px (w-6 h-6) — empty state icon, modal icon
+Ukuran stat card     : 28x28px (w-7 h-7) — icon di dalam container w-12 h-12
+Stroke width default : 1.75px (bukan 1.5) — lebih tebal untuk keterbacaan di atas background merah
+Stroke width tipis   : 1.5px — untuk ikon di empty state dan dropdown
 ```
 
 - ❌ Tidak ada ikon filled dan outline dicampur di halaman yang sama
 - ❌ Tidak ada emoji sebagai ikon UI
 - ❌ Tidak ada ikon dekoratif yang tidak punya fungsi
+- Loading spinner (`animate-spin`): kombinasi circle stroke + path fill diizinkan khusus untuk elemen ini
 
 ---
 
@@ -336,53 +438,57 @@ Warna          : Ikut warna teks parent element
 ### Empty State
 
 ```
-Ikon    : 40x40px, text-gray-300
-Judul   : text-sm, text-gray-500
-Deskripsi: text-xs, text-gray-400 (opsional)
-CTA     : link teks atau tombol sekunder kecil
+Konteks dropdown kecil (topbar notif) : container w-12 h-12 rounded-2xl bg #F3F4F6
+Konteks halaman dokumen               : container w-14 h-14 rounded-2xl bg #F3F4F6
+Konteks halaman notifikasi            : container w-16 h-16 rounded-2xl bg #F3F4F6
+
+Ikon dalam container : w-6 h-6, color #D1D5DB, stroke 1.5
+Judul                : text-sm font-medium, color #6B7280
+Deskripsi            : text-xs, color #9CA3AF (opsional)
 ```
 
-Selalu ada empty state yang dirancang. Tidak boleh ada halaman yang menampilkan tabel/list kosong tanpa pesan apapun.
+Selalu ada empty state yang dirancang. Tidak boleh ada halaman yang menampilkan list/tabel kosong tanpa pesan apapun.
 
 ### Loading / Skeleton
 
 ```
-bg: #F3F4F6 (gray-100)
-border-radius: sama dengan elemen yang digantikan
-animasi: pulse opacity sederhana (animate-pulse Tailwind)
+Blok utama   : bg-gray-200
+Blok sekunder: bg-gray-100
+Radius       : sama dengan elemen yang digantikan
+Animasi      : animate-pulse (Tailwind)
 ```
 
-Skeleton harus menyerupai bentuk konten yang akan muncul. Tidak boleh hanya satu blok abu-abu memanjang untuk semua jenis konten.
+Skeleton harus menyerupai bentuk konten yang akan muncul. Contoh: stat card skeleton = grid 6 kolom dengan blok label + blok angka per card.
 
 ---
 
 ## 11. Accessibility Baseline
 
-- Semua teks harus memenuhi WCAG AA minimum (4.5:1 untuk teks normal, 3:1 untuk teks besar)
-- Setiap elemen interaktif harus punya focus state yang terlihat (`ring-2 ring-blue-500`)
-- Semua input harus punya label yang terhubung via `for`/`id`
-- Warna status tidak boleh jadi satu-satunya indikator — selalu tambah teks atau ikon
+- Semua teks harus memenuhi WCAG AA minimum sebisa mungkin (4.5:1 untuk teks normal, 3:1 untuk teks besar)
+- Teks pada background `#ED1B2F` menggunakan `#ffffff` atau minimum `rgba(255,255,255,0.85)`
+- Setiap input yang punya label harus dihubungkan via `for`/`id` — kecuali search bar inline yang punya `placeholder` deskriptif
+- Warna status tidak boleh jadi satu-satunya indikator — selalu tambah teks atau ikon di samping warna
 - Tabel harus punya `<th scope>` yang benar
+- Tombol icon-only harus punya atribut `title` untuk tooltip keyboard/screenreader
 
 ---
 
 ## 12. Yang Selalu Dilarang (Anti-Pattern List)
-
-Ini adalah daftar hal yang tidak boleh muncul di ReNot, kapanpun, dengan alasan apapun:
 
 | Dilarang | Alasan |
 |---|---|
 | Gradient apapun | Tidak ada konteks yang membenarkan gradient di aplikasi compliance |
 | Glassmorphism / backdrop-blur | Dekoratif, berat di GPU, tidak meningkatkan keterbacaan |
 | `indigo-500` sebagai primary | Default AI slop — tidak ada hubungan dengan brand |
-| Card grid tiga kolom "icon + judul + 2 baris" | Pattern paling umum AI, tidak ada nilai informasi tambahan |
+| Hero tiga kolom "icon + judul + 2 baris" | Pattern marketing page, bukan aplikasi data |
 | Bounce / spring animation | Tidak profesional untuk konteks enterprise |
-| Font size < 12px | Aksesibilitas — terutama untuk pegawai yang mungkin lebih tua |
-| Warna di luar token yang terdaftar | Menciptakan inkonsistensi dan debt desain |
+| Font size < 10px | Aksesibilitas — terutama untuk pegawai yang mungkin lebih tua |
+| Warna di luar token yang terdaftar | Menciptakan inkonsistensi dan design debt |
 | Tombol pasangan primer + ghost di hero | Pattern marketing page, bukan aplikasi |
-| Shadow berwarna / neon glow | Dekoratif tanpa fungsi |
+| Neon glow | Dekoratif tanpa fungsi |
 | Teks ALL CAPS lebih dari 2 kata | Melelahkan dibaca, terasa teriak |
 | Emoji sebagai ikon UI | Tidak konsisten antar platform/OS |
+| Sidebar admin berbeda warna dari sidebar pegawai | Konsistensi brand — keduanya `#ED1B2F` |
 
 ---
 
@@ -390,13 +496,16 @@ Ini adalah daftar hal yang tidak boleh muncul di ReNot, kapanpun, dengan alasan 
 
 | Referensi | Untuk apa |
 |---|---|
-| [pertamina.com](https://www.pertamina.com/) | Sumber warna brand (#006CB8, #ED1B2F) |
+| [pertamina.com](https://www.pertamina.com/) | Sumber warna brand (#ED1B2F, #006CB8, #ACC42A) |
 | [WCAG 2.1 AA](https://www.w3.org/TR/WCAG21/) | Standar aksesibilitas minimum |
 | [Heroicons](https://heroicons.com/) | Library ikon |
 | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Font utama |
 | [Tailwind CSS](https://tailwindcss.com/) | Utility framework |
-| *AI Design Slop — Mohit Phogat (2026)* | Dasar filosofi dokumen ini |
+| UI Role Pegawai ReNot (Sprint 3) | **Sumber kebenaran utama** — implementasi yang sudah disetujui client |
+| UI Role Admin ReNot (Sprint 4) | Mengikuti philosophy ini — konsisten dengan pegawai |
 
 ---
 
 *Dokumen ini adalah keputusan desain yang hidup. Setiap perubahan harus didiskusikan, dicatat alasannya, dan di-commit bersama dengan perubahan kode yang mengikutinya. Jangan ubah token tanpa memperbarui dokumen ini.*
+
+**Terakhir diverifikasi:** 11 September 2026 — seluruh UI admin (Sprint 4) dikonfirmasi konsisten dengan philosophy ini.

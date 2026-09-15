@@ -1,9 +1,9 @@
 # DOKUMENTASI TEKNIS — ReNot
 ## Reminder & Notification Sertifikasi Pegawai
 
-**Versi dokumen:** 1.1
-**Terakhir diperbarui:** 8 September 2026
-**Status project:** Sprint 2 selesai (Role Pegawai) + UI Redesign Modern Bold — Role Admin belum dibangun
+**Versi dokumen:** 2.0
+**Terakhir diperbarui:** 11 September 2026
+**Status project:** Sprint 4 selesai — Seluruh fitur Admin & Pegawai selesai dibangun
 
 ---
 
@@ -12,15 +12,16 @@
 1. [Overview Project](#1-overview-project)
 2. [Tech Stack](#2-tech-stack)
 3. [Cara Menjalankan](#3-cara-menjalankan)
-4. [Struktur Project](#4-struktur-project)
-5. [Database](#5-database)
-6. [Backend — Laravel](#6-backend--laravel)
-7. [Frontend — Vue](#7-frontend--vue)
-8. [Design System](#8-design-system)
-9. [Akun Seeder](#9-akun-seeder)
-10. [API Endpoints](#10-api-endpoints)
-11. [Status Implementasi](#11-status-implementasi)
-12. [Yang Perlu Dilanjutkan](#12-yang-perlu-dilanjutkan)
+4. [Deployment — Docker / Podman](#4-deployment--docker--podman)
+5. [Struktur Project](#5-struktur-project)
+6. [Database](#6-database)
+7. [Backend — Laravel](#7-backend--laravel)
+8. [Frontend — Vue](#8-frontend--vue)
+9. [Design System](#9-design-system)
+10. [Akun Seeder](#10-akun-seeder)
+11. [API Endpoints](#11-api-endpoints)
+12. [Status Implementasi](#12-status-implementasi)
+13. [Catatan untuk Developer](#13-catatan-untuk-developer)
 
 ---
 
@@ -35,7 +36,7 @@ ReNot adalah aplikasi internal perusahaan (konteks Pertamina) untuk memantau mas
 **Dokumen referensi:**
 - `SRS-ReNot.md` — Software Requirements Specification lengkap
 - `database.dbml` — Database diagram (bisa dibuka di dbdiagram.io)
-- `PHILOSOPHY.md` — Design system dan aturan UI v1.1 (WAJIB dibaca sebelum membuat UI baru)
+- `PHILOSOPHY.md` — Design system dan aturan UI v2.0 (WAJIB dibaca sebelum membuat UI baru)
 
 ---
 
@@ -44,7 +45,7 @@ ReNot adalah aplikasi internal perusahaan (konteks Pertamina) untuk memantau mas
 | Layer | Teknologi | Versi |
 |---|---|---|
 | Backend | Laravel | 13.x |
-| Database | PostgreSQL | 18 (via Podman container) |
+| Database | PostgreSQL | 16 (via Docker/Podman container) |
 | Auth | Laravel Sanctum | 4.x |
 | Frontend | Vue 3 (Composition API) | Latest |
 | Build | Vite | 8.x |
@@ -52,39 +53,50 @@ ReNot adalah aplikasi internal perusahaan (konteks Pertamina) untuk memantau mas
 | State | Pinia | Latest |
 | Router | Vue Router | Latest |
 | HTTP | Axios | Latest |
-| Excel Export | maatwebsite/excel | 4.x (require `--ignore-platform-req=ext-gd --ignore-platform-req=ext-iconv`) |
+| Excel Export | maatwebsite/excel | 4.x |
 | Font | Plus Jakarta Sans | Google Fonts |
+| Container | Docker / Podman | — |
+| Web Server | Nginx + PHP-FPM | Alpine |
+| Process Manager | Supervisord | — |
 
 ---
 
 ## 3. Cara Menjalankan
 
-### Prerequisites
-
-```bash
-# PHP 8.5, Composer, Node 26, npm 12
-# PostgreSQL via Podman (sudah running di port 5432)
-podman start postgres_db
-```
-
-### Setup
+### Mode Development (lokal)
 
 ```bash
 cd laravel-vue-template
 
-# Install dependencies (jika belum)
+# Install dependencies
 composer install
 npm install
 
-# Copy env jika belum ada
+# Copy env
 cp .env.example .env
 php artisan key:generate
+
+# Jalankan database PostgreSQL via Podman
+podman start postgres_db
+
+# Migration + seed
+php artisan migrate --seed
+
+# Storage symlink
+php artisan storage:link
+
+# Terminal 1 — Backend
+php artisan serve
+
+# Terminal 2 — Frontend (HMR)
+npm run dev
 ```
 
-### Database
+Buka: `http://localhost:8000`
+
+### Kredensial Database (dev)
 
 ```env
-# .env — kredensial PostgreSQL (Podman container)
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
@@ -93,127 +105,173 @@ DB_USERNAME=root
 DB_PASSWORD=root
 ```
 
-```bash
-# Buat database jika belum ada
-podman exec postgres_db psql -U root -d db -c "CREATE DATABASE renot;"
-
-# Jalankan migration + seeder
-php artisan migrate --seed
-
-# Atau reset dari awal
-php artisan migrate:fresh --seed
-```
-
-### Menjalankan
+### Menjalankan Scheduled Reminder Manual
 
 ```bash
-# Terminal 1 — Backend
-php artisan serve
-
-# Terminal 2 — Frontend (dev dengan HMR)
-npm run dev
-
-# Atau build production
-npm run build
-```
-
-Buka: `http://localhost:8000`
-
-### Storage (untuk upload foto/file)
-
-```bash
-php artisan storage:link
-# Membuat symlink public/storage → storage/app/public
+php artisan reminders:send
 ```
 
 ---
 
-## 4. Struktur Project
+## 4. Deployment — Docker / Podman
+
+### Struktur file Docker
+
+```
+laravel-vue-template/
+├── Dockerfile                  ← Multi-stage build (composer → node → php-fpm-nginx)
+├── docker-compose.yml          ← 2 service: app + db
+├── .dockerignore
+└── docker/
+    ├── nginx/default.conf      ← Nginx port 8000, SPA catch-all, storage alias
+    ├── php/php.ini             ← upload 10M, memory 256M, opcache
+    ├── supervisord.conf        ← Manage php-fpm + nginx dalam 1 container
+    └── start.sh                ← Entrypoint: wait DB → migrate → cache → start
+```
+
+### Build & Run
+
+```bash
+cd laravel-vue-template
+
+# Build image dan jalankan semua service
+podman compose up -d --build
+
+# Lihat log
+podman compose logs -f app
+podman compose logs -f db
+
+# Seed database (pertama kali setelah container jalan)
+podman compose exec app php artisan db:seed
+
+# Reset database
+podman compose exec app php artisan migrate:fresh --seed
+
+# Stop semua container
+podman compose down
+```
+
+### Akses setelah deploy
+
+| Service | URL |
+|---|---|
+| Aplikasi ReNot | `http://127.0.0.1:8000` |
+| PostgreSQL | `127.0.0.1:5432` |
+
+### Catatan Podman
+
+- Semua image pakai prefix `docker.io/` (wajib jika `registries.conf` tidak punya unqualified-search)
+- `podman-compose` kompatibel dengan `docker-compose.yml` v3
+- Storage avatar dan file sertifikat di-mount ke named volume — tidak hilang saat container di-recreate
+- `APP_KEY` di `docker-compose.yml` sudah di-set — jangan generate ulang kecuali fresh deploy
+
+### Scheduler di Production
+
+Untuk menjalankan `reminders:send` secara otomatis setiap hari, tambahkan cron di server:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Tambahkan baris ini (jalankan setiap hari pukul 07:00 WIB)
+0 0 * * * cd /path/to/laravel-vue-template && php artisan schedule:run >> /dev/null 2>&1
+```
+
+---
+
+## 5. Struktur Project
 
 ```
 laravel-vue-template/
 ├── app/
+│   ├── Console/
+│   │   └── Commands/
+│   │       └── SendReminders.php         ← Command reminder harian
 │   ├── Exports/
-│   │   ├── DocumentsExport.php        ← Export Excel admin (filter: status, dept, user, category)
-│   │   └── MyDocumentsExport.php      ← Export Excel pegawai (dokumen milik sendiri)
+│   │   ├── AdminDocumentsExport.php      ← Export Excel admin (ikut filter)
+│   │   └── MyDocumentsExport.php         ← Export Excel pegawai
 │   ├── Http/
 │   │   ├── Controllers/
+│   │   │   ├── Admin/
+│   │   │   │   ├── ApprovalController.php      ← List dokumen pending approval
+│   │   │   │   ├── AuditController.php          ← Log aktivitas (server-side pagination)
+│   │   │   │   ├── DashboardController.php      ← Stats global + pending + expiring
+│   │   │   │   ├── DepartemenController.php     ← CRUD departemen
+│   │   │   │   ├── DocumentController.php       ← CRUD dokumen semua pegawai + approve/reject
+│   │   │   │   ├── KategoriController.php       ← CRUD jenis sertifikasi per kategori
+│   │   │   │   ├── ManajemenAdminController.php ← CRUD akun admin
+│   │   │   │   ├── NotificationController.php   ← Notifikasi admin
+│   │   │   │   ├── PegawaiController.php        ← CRUD pegawai + toggle aktif + reset password
+│   │   │   │   └── PengaturanController.php     ← Jadwal reminder + template email
 │   │   │   ├── Auth/
-│   │   │   │   └── AuthController.php     ← login, logout, me, forgotPassword, resetPassword
+│   │   │   │   └── AuthController.php
 │   │   │   ├── Pegawai/
-│   │   │   │   ├── DashboardController.php    ← GET /api/pegawai/dashboard
-│   │   │   │   ├── DocumentController.php     ← CRUD dokumen + export + download
-│   │   │   │   ├── NotificationController.php ← list, markAsRead, markAllAsRead
-│   │   │   │   └── ProfileController.php      ← show, update (HP+foto), changePassword
-│   │   │   └── CertificationCategoryController.php ← GET /api/certification-categories
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   ├── DocumentController.php
+│   │   │   │   ├── NotificationController.php
+│   │   │   │   └── ProfileController.php
+│   │   │   └── CertificationCategoryController.php
 │   │   └── Middleware/
-│   │       └── EnsureRole.php         ← Middleware role guard (pakai alias 'role:pegawai')
-│   └── Models/
-│       ├── User.php                   ← Satu tabel untuk admin & pegawai (kolom role)
-│       ├── Department.php
-│       ├── CertificationCategory.php  ← HSSE & Aviasi (is_deletable=false)
-│       ├── CertificationType.php      ← GSI, SI, AT, RDS, PACE, dll (bisa CRUD admin)
-│       ├── Document.php               ← Status: pending_approval, ditolak, aktif, segera_expired, expired
-│       ├── DocumentVersion.php        ← Riwayat file saat dokumen diganti
-│       ├── Notification.php           ← In-app & email notification
-│       ├── ReminderSchedule.php       ← Jadwal H-X (bisa dikonfigurasi admin dari UI)
-│       ├── ReminderLog.php            ← Mencegah duplicate reminder
-│       ├── EmailTemplate.php          ← Template email per jenis notifikasi
-│       ├── SystemSetting.php          ← Key-value store pengaturan sistem
-│       └── ActivityLog.php            ← Audit trail semua aktivitas
+│   │       └── EnsureRole.php
+│   └── Models/ (12 model)
 ├── database/
-│   ├── migrations/                    ← 14 migration file
+│   ├── migrations/                    ← 16 migration file
 │   └── seeders/
-│       ├── DatabaseSeeder.php
-│       ├── DepartmentSeeder.php       ← 5 departemen
-│       ├── CertificationCategorySeeder.php ← HSSE (6 jenis) + Aviasi (3 jenis)
-│       ├── ReminderScheduleSeeder.php ← 12 jadwal (H-60 s/d H-1)
-│       ├── UserSeeder.php             ← 1 admin + 3 pegawai
-│       ├── DocumentSeeder.php         ← Dokumen realistis per pegawai
-│       └── NotificationSeeder.php     ← Notifikasi sample per user
+│       ├── DocumentSeeder.php         ← Dokumen + dummy file dari /sertif/
+│       └── ... (6 seeder lainnya)
+├── docker/                            ← Konfigurasi Docker/Podman
 ├── routes/
-│   ├── api.php                        ← Semua API routes
-│   └── web.php                        ← Catch-all → SPA (Vue Router handle)
-├── public/
-│   ├── og.jpg                         ← Gambar hero halaman login (panel kiri 70%)
-│   └── icon.png                       ← Icon/logo aplikasi ReNot
+│   ├── api.php                        ← Semua API endpoint
+│   ├── console.php                    ← Scheduled command (reminders:send daily)
+│   └── web.php                        ← Catch-all → SPA
 └── resources/
-    ├── css/app.css                    ← Tailwind v4 + design tokens (Modern Bold v1.1)
-    ├── views/welcome.blade.php        ← SPA entry point + load Plus Jakarta Sans
+    ├── css/app.css                    ← Tailwind v4 + design tokens
     └── js/
-        ├── app.js                     ← Entry point — init Pinia → fetchUser → mount router → mount app
-        ├── App.vue                    ← Root component (<RouterView />)
-        ├── bootstrap.js               ← Axios setup + CSRF
-        ├── router/index.js            ← Vue Router + route guards (guestOnly, requiresAuth, role)
-        ├── stores/
-        │   └── auth.js                ← Pinia auth store
+        ├── app.js
+        ├── router/index.js
+        ├── stores/auth.js
         ├── composables/
-        │   └── useDocumentHelpers.js  ← Helper: statusConfig (dengan badgeStyle inline), formatDate, formatFileSize, daysUntilExpiry
+        │   ├── useDocumentHelpers.js  ← statusConfig, formatDate, formatFileSize, daysUntilExpiry
+        │   └── useFaq.js             ← FAQ dinamis per halaman (inject/provide)
         ├── components/
-        │   ├── AppSidebar.vue         ← Sidebar vertikal kiri, full height, merah Pertamina, profil+logout+FAQ di bawah
-        │   └── AppTopbar.vue          ← Topbar merah Pertamina, logo+nama, bell notif dropdown, nama user (tanpa dropdown)
+        │   ├── AppSidebar.vue        ← Sidebar merah, collapsible, FAQ modal popup
+        │   └── AppTopbar.vue         ← Jam live, bell notifikasi, dropdown
         ├── layouts/
-        │   ├── PegawaiLayout.vue      ← Layout role pegawai (flex row: sidebar kiri + main)
-        │   └── AdminLayout.vue        ← Layout role admin (flex row: sidebar kiri + main)
+        │   ├── PegawaiLayout.vue     ← provide setPageFaqs, fetch unread count
+        │   └── AdminLayout.vue       ← provide setPageFaqs, fetch unread count admin
         └── pages/
             ├── auth/
-            │   ├── Login.vue          ← Layout 70/30, gambar kiri, form kanan
-            │   ├── ForgotPassword.vue ← Konsisten dengan design system #006CB8
-            │   └── ResetPassword.vue  ← Konsisten dengan design system #006CB8
+            │   ├── Login.vue
+            │   ├── ForgotPassword.vue
+            │   └── ResetPassword.vue
             ├── pegawai/
-            │   ├── Dashboard.vue      ← Header avatar + 6 stat card + quick actions + 2 kolom (notifikasi + sertifikat terakhir)
-            │   ├── Dokumen.vue        ← List dokumen + filter status + export Excel
-            │   ├── DokumenDetail.vue  ← Detail + status + riwayat file
-            │   ├── DokumenForm.vue    ← Upload/edit dokumen (kategori dinamis, drag & drop)
-            │   ├── Notifikasi.vue     ← List semua notifikasi + mark read
-            │   └── Profile.vue        ← Edit HP + foto + ganti password
+            │   ├── Dashboard.vue
+            │   ├── Dokumen.vue
+            │   ├── DokumenDetail.vue
+            │   ├── DokumenForm.vue
+            │   ├── Notifikasi.vue
+            │   └── Profile.vue
             └── admin/
-                └── Dashboard.vue      ← Placeholder "Selamat datang" (belum dibangun penuh)
+                ├── Dashboard.vue           ← Stats global + pending + expiring soon
+                ├── Approval.vue            ← List pending, modal approve/tolak
+                ├── Dokumen.vue             ← Semua dokumen + filter departemen
+                ├── DokumenDetail.vue       ← Detail + tombol approve/tolak/edit
+                ├── DokumenForm.vue         ← Tambah/edit + pilih pegawai
+                ├── Notifikasi.vue
+                ├── Profile.vue
+                ├── Pegawai.vue             ← List pegawai + toggle aktif + reset pwd
+                ├── PegawaiForm.vue         ← Form tambah/edit pegawai
+                ├── Departemen.vue          ← CRUD departemen via modal
+                ├── Kategori.vue            ← CRUD jenis sertifikasi per kategori
+                ├── Audit.vue               ← Log aktivitas + pagination server-side
+                ├── ManajemenAdmin.vue      ← CRUD akun admin
+                ├── Pengaturan.vue          ← Jadwal reminder + template email
+                └── AdminPlaceholder.vue   ← Komponen "Segera Hadir" reusable
 ```
 
 ---
 
-## 5. Database
+## 6. Database
 
 **21 tabel** di database `renot`. Semua sudah ter-migrate.
 
@@ -221,18 +279,18 @@ laravel-vue-template/
 
 | Tabel | Keterangan |
 |---|---|
-| `users` | Admin & pegawai dalam satu tabel. Kolom `role`: `admin`/`pegawai`. Kolom tambahan: `employee_number`, `phone`, `avatar`, `department_id`, `is_active`, `created_by` |
+| `users` | Admin & pegawai dalam satu tabel. Kolom `role`: `admin`/`pegawai`. |
 | `departments` | Master data departemen/divisi |
-| `certification_categories` | HSSE & Aviasi. `is_deletable=false` artinya tidak bisa dihapus |
-| `certification_types` | Jenis sertifikat per kategori (GSI, SI, AT, RDS, PACE, dll). Bisa CRUD oleh admin |
-| `documents` | Dokumen sertifikasi pegawai. Status: `pending_approval`, `ditolak`, `aktif`, `segera_expired`, `expired` |
-| `document_versions` | Riwayat file saat dokumen diganti (hanya file, bukan data) |
-| `notifications` | Notifikasi in-app & email. Channel: `in_app`, `email` |
-| `reminder_schedules` | Jadwal H-X yang bisa dikonfigurasi admin (H-60, H-45, ..., H-1) |
-| `reminder_logs` | Mencatat reminder yang sudah terkirim (unique constraint mencegah duplikat) |
-| `email_templates` | Template email per tipe notifikasi, bisa diedit admin |
-| `system_settings` | Key-value store (max file size, allowed types, dll) |
-| `activity_logs` | Audit trail semua aktivitas CRUD dokumen |
+| `certification_categories` | HSSE & Aviasi. `is_deletable=false` |
+| `certification_types` | Jenis sertifikat per kategori (GSI, SI, AT, RDS, PACE, dll) |
+| `documents` | Dokumen sertifikasi. Status: `pending_approval`, `ditolak`, `aktif`, `segera_expired`, `expired` |
+| `document_versions` | Riwayat file saat dokumen diganti |
+| `notifications` | Notifikasi in-app & email |
+| `reminder_schedules` | Jadwal H-X (H-60 s/d H-1), bisa ditambah/hapus via UI |
+| `reminder_logs` | Prevent duplicate reminder — unique index `(document_id, reminder_schedule_id)` |
+| `email_templates` | Template email per tipe notifikasi dengan placeholder |
+| `system_settings` | Key-value store pengaturan sistem |
+| `activity_logs` | Audit trail semua aktivitas dengan old_values/new_values JSONB |
 
 ### Logika Status Dokumen
 
@@ -244,188 +302,171 @@ Approved admin      → dihitung dari expiry_date:
   expiry_date ≤ H+60 → segera_expired
   expiry_date < hari ini → expired
 
-Dokumen yang diinput langsung oleh admin → langsung aktif (skip approval)
-Dokumen yang diedit/file diganti pegawai → kembali ke pending_approval
+Dokumen diinput langsung admin → langsung aktif (skip approval)
+Dokumen diedit/file diganti pegawai → kembali ke pending_approval
+```
+
+### Scheduled Reminder Logic
+
+```
+php artisan reminders:send (dijalankan daily via schedule)
+  ├── Update dokumen aktif/segera_expired yang expiry_date < today → expired
+  │   └── Kirim notifikasi in_app "Dokumen Kadaluarsa" ke pegawai
+  └── Untuk setiap reminder_schedule aktif (H-X):
+      ├── Cari dokumen dengan expiry_date = today + X hari
+      ├── Skip jika sudah ada di reminder_logs (deduplication)
+      ├── Kirim notifikasi in_app ke pegawai
+      └── Catat ke reminder_logs
 ```
 
 ---
 
-## 6. Backend — Laravel
+## 7. Backend — Laravel
 
 ### Auth Flow
 
 ```
-POST /api/login
-  → cek email + password
-  → cek is_active (jika false → 422 "Akun dinonaktifkan")
-  → buat Sanctum token
-  → return { token, user: { id, name, email, role, employee_number, phone, avatar (Storage::url), department } }
-
-GET /api/me (auth:sanctum)
-  → return user + unread_notifications_count
-
-POST /api/forgot-password → kirim link reset ke email
-POST /api/reset-password  → proses token + simpan password baru
-POST /api/logout          → hapus current token
+POST /api/login → token + user (avatar via Storage::url)
+GET  /api/me    → user + unread_notifications_count
+POST /api/logout → hapus token
 ```
 
 ### Middleware
 
-**`EnsureRole`** — `app/Http/Middleware/EnsureRole.php`
-- Alias: `role`
-- Dipakai di route: `Route::middleware('role:pegawai')`
-- Cek `$request->user()->role === 'pegawai'`
-- Return 403 jika tidak cocok
+**`EnsureRole`** — alias `role`, cek `$request->user()->role`
+- `middleware('role:pegawai')` untuk route pegawai
+- `middleware('role:admin')` untuk route admin
 
-Didaftarkan di `bootstrap/app.php`:
+Untuk API, unauthenticated request return **401 JSON** (bukan redirect ke login).
+
+### Admin Controllers
+
+| Controller | Fungsi Utama |
+|---|---|
+| `DashboardController` | Stats global: total pegawai, dokumen, pending, expired. List 5 pending + 5 expiring soon. |
+| `ApprovalController` | List dokumen `pending_approval` dengan filter kategori + departemen |
+| `DocumentController` | CRUD semua dokumen + approve + reject + download + export Excel (ikut filter) |
+| `PegawaiController` | CRUD pegawai + toggleActive + resetPassword |
+| `DepartemenController` | CRUD departemen. Hapus dicegah jika ada pegawai aktif. |
+| `KategoriController` | CRUD jenis sertifikasi per kategori. Hapus dicegah jika dipakai dokumen. |
+| `AuditController` | List activity_logs dengan server-side pagination + filter |
+| `ManajemenAdminController` | CRUD akun admin. Tidak bisa hapus diri sendiri. |
+| `NotificationController` | Notifikasi in-app admin + markAsRead + markAllAsRead |
+| `PengaturanController` | CRUD reminder_schedules + toggle aktif. CRUD email_templates. |
+
+### Approve vs Reject Logic
+
 ```php
-$middleware->alias(['role' => \App\Http\Middleware\EnsureRole::class]);
+// Approve: status dihitung dari expiry_date
+$document->status      = $document->computeStatus(); // aktif/segera_expired/expired
+$document->approved_by = $admin->id;
+$document->approved_at = now();
+// → Kirim notifikasi in_app ke pegawai
+// → Catat ActivityLog
+
+// Reject: alasan wajib diisi
+$document->status           = Document::STATUS_DITOLAK;
+$document->rejection_reason = $request->rejection_reason;
+// → Kirim notifikasi in_app ke pegawai
+// → Catat ActivityLog
 ```
 
-### Penting: Avatar URL
+### DocumentController Admin — Perbedaan vs Pegawai
 
-Avatar **wajib** dikembalikan sebagai `Storage::url($user->avatar)`, bukan path mentah.
+- Admin bisa akses **semua** dokumen, pegawai hanya milik sendiri
+- Admin input dokumen → **langsung aktif** (auto-approve), pegawai → pending_approval
+- Admin edit dokumen yang sudah approved → status **dihitung ulang** dari expiry_date baru
+- Pegawai edit → selalu kembali ke pending_approval
 
-```php
-// BENAR
-'avatar' => $user->avatar ? Storage::url($user->avatar) : null,
-// → /storage/avatars/xxx.jpg
+### Preview File
 
-// SALAH
-'avatar' => $user->avatar,
-// → avatars/xxx.jpg (tidak bisa diakses browser)
-```
-
-### Export Excel
-
-Menggunakan `maatwebsite/excel` v4 (diinstall dengan `--ignore-platform-req`):
-
-- `MyDocumentsExport` — untuk pegawai, filter by status
-- `DocumentsExport` — untuk admin, filter by status/dept/user/category
-
-Header berwarna: hijau untuk pegawai, biru untuk admin.
+- **Image** (jpg/png/webp) — akses via `/storage/{file_path}` langsung (storage public)
+- **PDF** — fetch via axios dengan Bearer token → buat Blob URL → render di `<embed>`
+- **Download** — fetch via axios dengan Bearer token → trigger download via Blob
 
 ---
 
-## 7. Frontend — Vue
+## 8. Frontend — Vue
 
-### Cara Kerja Auth
+### FAQ Dinamis Per Halaman
 
-`app.js` melakukan `auth.fetchUser()` **sebelum** router di-mount:
-
-```js
-auth.fetchUser().finally(async () => {
-    const { default: router } = await import('./router');
-    app.use(router);
-    app.mount('#app');
-});
-```
-
-Ini penting — jangan ubah urutan ini. Jika router di-mount dulu sebelum `fetchUser()` selesai, route guard akan salah membaca state auth.
-
-### Route Guard
-
-Di `router/index.js`:
+Setiap halaman set FAQ kontekstual yang muncul sebagai modal popup dari sidebar:
 
 ```js
-// guestOnly: true → redirect ke dashboard jika sudah login
-// requiresAuth: true → redirect ke login jika belum login
-// role: 'admin'|'pegawai' → redirect jika role tidak cocok
+import { useFaq } from '@/composables/useFaq.js';
+
+// Cara penggunaan: pass array langsung ke useFaq()
+// FAQ otomatis di-set saat onMounted dan di-reset saat unmount
+useFaq([
+    { q: 'Pertanyaan?', a: 'Jawaban.', icon: 'M...' },
+]);
 ```
 
-### Auth Store (`stores/auth.js`)
+Alur: `PegawaiLayout`/`AdminLayout` provide `setPageFaqs` → halaman inject via `useFaq()` → `AppSidebar` tampilkan sebagai modal popup dengan backdrop blur.
 
-```js
-// State
-user            // Object user yang login
-token           // Sanctum token (tersimpan di localStorage)
-isAuthenticated // computed: !!token
-isAdmin         // computed: user?.role === 'admin'
-isPegawai       // computed: user?.role === 'pegawai'
+### Sidebar
 
-// Actions
-login(credentials)         // POST /api/login
-logout()                   // POST /api/logout + clearAuth()
-fetchUser()                // GET /api/me (untuk restore session)
-updateProfile(formData)    // POST /api/pegawai/profile (multipart)
-forgotPassword(email)      // POST /api/forgot-password
-resetPassword(payload)     // POST /api/reset-password
-```
+- Default **collapsed** (64px). Toggle expand/collapse via tombol chevron.
+- Width expanded: 220px. Transition: 200ms ease.
+- Tombol Bantuan → FAQ modal popup (bukan inline, bukan absolute)
+- Badge unread count pada menu Notifikasi (admin & pegawai)
 
-### Layout Struktur
+### Topbar
 
-```
-PegawaiLayout.vue / AdminLayout.vue
-├── AppTopbar.vue      ← Full width, merah Pertamina #ED1B2F, logo+nama kiri, bell+nama user kanan
-└── [flex row]
-    ├── AppSidebar.vue ← Vertikal kiri, full height calc(100vh - 90px), sticky top:12px
-    │   ├── nav items  ← Menu utama dengan icon container rounded-lg
-    │   └── bottom     ← Bantuan (FAQ popup) + Profil + Keluar (modal konfirmasi)
-    └── <main>         ← Konten halaman (RouterView)
-```
+- Background `#ED1B2F`, border-radius 16px
+- Bell notifikasi: dropdown 5 terbaru, mark-as-read, ping animation saat ada unread
+- Kanan: jam live `HH:MM` update setiap detik
 
-### AppTopbar.vue
+### Layout Admin
 
-- Background: **Merah Pertamina `#ED1B2F`**, `border-radius: 16px`, shadow merah subtle
-- Kiri: logo icon (container putih transparan) + "ReNot" bold + divider + "PERTAMINA" uppercase
-- Kanan: bell notifikasi (dropdown 5 terbaru, mark read) + divider + avatar/initial + nama user
-- **Tidak ada user dropdown** — profil dan logout dipindah ke sidebar
-- Badge notif: white pulse animation saat ada unread
-- Props: `user`, `unreadCount`, `notifRoute`
-- Emits: `notif-read`
+Sama persis dengan pegawai. `AdminLayout.vue` provide `setPageFaqs`, fetch unread count dari `/api/admin/notifications`.
 
-### AppSidebar.vue
-
-- Background: **Merah Pertamina `#ED1B2F`** flat, `border-radius: 16px`, lebar 220px
-- `position: sticky; top: 12px; height: calc(100vh - 90px)` — mengikuti scroll, full tinggi layar
-- Setiap nav item punya **icon container** `w-7 h-7 rounded-lg` background `rgba(255,255,255,0.12)`
-- Active item: background `rgba(255,255,255,0.20)`, font-weight 700
-- **Di bagian bawah sidebar** (setelah divider):
-  - **Bantuan** — toggle FAQ panel popup ke atas sidebar (3 FAQ card)
-  - **Profil** — RouterLink ke halaman profil
-  - **Keluar** — membuka modal konfirmasi logout
-- **Modal logout**: overlay gelap, icon, teks konfirmasi, tombol Batal + Ya Keluar
-- Props: `menuGroups`, `user`, `profileRoute`
-- Emits: `logout`
-
-### Dashboard Pegawai (`pages/pegawai/Dashboard.vue`)
-
-Struktur halaman dashboard:
+### Dashboard Admin
 
 ```
-1. Header card   ← Avatar initial merah, nama, chips (role + no. pegawai + departemen), tanggal hari ini
-2. Stat cards    ← 6 card grid, masing-masing punya icon container + angka + top accent bar per warna status
-3. Quick actions ← Tombol "Upload Dokumen" (merah) + "Semua Dokumen" (card-elevated)
-4. Bottom 2 col  ← Notifikasi Terbaru (2/3 lebar) | Sertifikat Terakhir (1/3 lebar)
+Header card: avatar biru + nama + badge "Admin HR" + tanggal
+
+6 Stat card (grid-cols-6):
+  Total Pegawai (klik → admin.pegawai) | Total Dokumen | Pending | Expired | Segera Expired | Aktif
+
+2 panel bawah (grid-cols-2):
+  Menunggu Approval (5 terbaru) | Segera Kadaluarsa (5 terbaru)
 ```
 
-**Sertifikat Terakhir** diambil dari `GET /api/pegawai/documents` (4 dokumen terbaru), bukan dari endpoint dashboard. Ini fetch terpisah di dalam `fetchDashboard()`.
+### Halaman Dokumen Admin
 
-### useDocumentHelpers.js
+- Filter: search nama pegawai/sertifikat, status, kategori, jenis, **departemen**, range expiry
+- Semua filter **client-side** dari satu fetch
+- Tombol Approve langsung dari list (hanya muncul jika pending)
+- Export Excel ikut filter aktif
 
-Composable reusable untuk semua halaman dokumen. Sejak v1.1, menambahkan `badgeStyle` (inline style string) dan `accentColor` per status:
+### Halaman Approval
 
-```js
-const { getStatusConfig, formatDate, formatFileSize, daysUntilExpiry } = useDocumentHelpers();
+- Hanya menampilkan dokumen `pending_approval`
+- Filter: search, kategori, departemen
+- Setelah approve/tolak → baris dihapus dari list secara reactive
 
-getStatusConfig('aktif')
-// {
-//   label: 'Aktif',
-//   badge: 'bg-lime-100 text-lime-700',
-//   badgeStyle: 'background:#F7FEE7; color:#5a6e0f;',
-//   dot: 'bg-lime-500',
-//   dotStyle: 'background:#ACC42A;',
-//   accentColor: '#ACC42A'
-// }
+### Halaman Audit Trail
 
-formatDate('2026-09-08')        // "8 September 2026"
-formatFileSize(1048576)         // "1.0 MB"
-daysUntilExpiry('2026-10-01')  // 23 (hari tersisa, negatif jika sudah lewat)
-```
+- **Server-side pagination** (satu-satunya halaman yang menggunakan ini)
+- 20 entri per halaman
+- Expand row untuk lihat `old_values` vs `new_values`
+
+### Halaman Pegawai
+
+- Badge jumlah dokumen, expired, dan pending per baris pegawai
+- Toggle aktif/nonaktif langsung dari list
+- Reset password via modal
+- Form tambah/edit: nama, email, NIP, HP, departemen, password (hanya saat tambah), toggle status
+
+### Composables
+
+| File | Fungsi |
+|---|---|
+| `useDocumentHelpers.js` | `getStatusConfig`, `formatDate`, `formatFileSize`, `daysUntilExpiry` |
+| `useFaq.js` | `useFaq([...items])` — set FAQ kontekstual sidebar per halaman, auto-reset on unmount |
 
 ### Global CSS Class: `.card-elevated`
-
-Didefinisikan di `resources/css/app.css`, dipakai di semua halaman untuk card yang tampil jelas di atas background:
 
 ```css
 .card-elevated {
@@ -441,79 +482,78 @@ Didefinisikan di `resources/css/app.css`, dipakai di semua halaman untuk card ya
 
 ---
 
-## 8. Design System
+## 9. Design System
 
-**WAJIB baca `PHILOSOPHY.md` v1.1 sebelum membuat UI baru.**
+**WAJIB baca `PHILOSOPHY.md` v2.0 sebelum membuat UI baru.**
 
-### Token Warna Utama (v1.1 — Modern Bold)
+Philosophy v2.0 mencerminkan UI yang sudah dibangun dan disetujui client. Semua halaman baru harus konsisten.
+
+### Token Warna Utama
 
 ```
-Background halaman  #F2F2F0   abu sangat muda warm
+Background halaman  #F2F2F0   (warm off-white)
 Surface (card)      #FFFFFF
-Border              #E2E8F0   (lebih gelap dari sebelumnya untuk card-elevated)
+Border              #E2E8F0   (1.5px)
 
-Pertamina Blue      #006CB8   CTA sekunder, link, focus ring
-Pertamina Red       #ED1B2F   Topbar, sidebar, CTA utama, danger
-Pertamina Lime      #ACC42A   Status Aktif, accent sukses (resmi digunakan sejak v1.1)
+Pertamina Red       #ED1B2F   CTA utama, topbar, sidebar, focus border input
+Pertamina Blue      #006CB8   CTA sekunder, ghost button, link, badge info
+Pertamina Lime      #ACC42A   Status Aktif
 
 Text heading        #111827
 Text body           #374151
 Text muted          #6B7280
-Text disabled       #9CA3AF
+Text disabled       #9CA3AF   (juga dipakai untuk label input uppercase)
 ```
 
-### Status Dokumen (diperbarui v1.1)
+### Hierarki Warna CTA
+
+- **Merah `#ED1B2F`** = CTA utama (Upload, Simpan, Hapus, tombol utama semua halaman)
+- **Biru `#006CB8`** = CTA sekunder / ghost (link "Lihat Detail", button secondary)
+- Jangan balik hierarki ini.
+
+### Status Dokumen
 
 ```
-aktif            → Lime Pertamina  #ACC42A   (sebelumnya #16A34A hijau generic)
-segera_expired   → Amber           #D97706
-expired          → Merah Pertamina #ED1B2F
-pending_approval → Abu             #6B7280
-ditolak          → Pink            #DB2777
+aktif            → #ACC42A  Lime Pertamina
+segera_expired   → #D97706  Amber
+expired          → #ED1B2F  Merah Pertamina
+pending_approval → #6B7280  Abu
+ditolak          → #DB2777  Pink
 ```
 
-### Font
+### Input Fields
 
-**Plus Jakarta Sans** — di-load di `welcome.blade.php` via Google Fonts.
-Weights: 400, 500, 600, 700.
-
-### Topbar & Sidebar
-
-Keduanya menggunakan **Merah Pertamina `#ED1B2F`** sebagai background:
-
-```css
-/* Topbar */
-background: #ED1B2F;
-border-radius: 16px;
-box-shadow: 0 2px 16px rgba(237,27,47,0.25), 0 1px 4px rgba(0,0,0,0.08);
-
-/* Sidebar */
-background: #ED1B2F;
-border-radius: 16px;
-width: 220px;
-height: calc(100vh - 90px);
-position: sticky;
-top: 12px;
+```
+background    : #F9FAFB
+border        : 1.5px solid #E2E8F0
+border-radius : rounded-xl (12px)
+padding       : px-3 py-2.5 atau px-4 py-2.5
+font          : text-sm font-medium color #111827
+focus         : border-color #ED1B2F (via @focus/@blur JS handler)
+label         : text-xs font-bold uppercase tracking-wide color #9CA3AF
 ```
 
-Semua teks di dalam topbar dan sidebar menggunakan putih (`#ffffff`) dengan opacity bervariasi untuk hierarki:
-- Teks utama/aktif: `#ffffff` (100%)
-- Teks default: `rgba(255,255,255,0.85)`
-- Label group: `rgba(255,255,255,0.50)`
-- Divider: `rgba(255,255,255,0.15)`
+### Border Radius
 
-### Yang Dilarang (dari PHILOSOPHY.md v1.1)
+```
+16px (rounded-2xl) → topbar, sidebar, modal, avatar, card header utama
+12px (rounded-xl)  → .card-elevated, input, tombol, dropdown panel
+ 8px (rounded-lg)  → icon container w-7 h-7 di nav
+9999px (rounded-full) → badge pill, dot indikator
+```
 
-- Gradient apapun di komponen UI (topbar/sidebar sudah flat, bukan gradient)
+### Yang Dilarang
+
+- Gradient apapun
 - `indigo-500` sebagai primary
-- Card grid 3 kolom "icon + judul + 2 baris" generic
 - Bounce/spring animation
-- Font size < 12px
+- Font < 10px
 - Warna di luar token yang terdefinisi
+- Sidebar admin berbeda warna dari sidebar pegawai
 
 ---
 
-## 9. Akun Seeder
+## 10. Akun Seeder
 
 Semua password: `password`
 
@@ -524,11 +564,11 @@ Semua password: `password`
 | Pegawai | Siti Rahayu | siti@renot.app | EMP-002 | Aviasi |
 | Pegawai | Ahmad Fauzi | ahmad@renot.app | EMP-003 | Operasional |
 
-**Budi Santoso** punya avatar yang sudah diupload (untuk testing foto profil di navbar).
+**Semua dokumen** sudah punya file dummy (gambar sertifikat) dari folder `/sertif/` — tombol Download dan Preview aktif.
 
 ---
 
-## 10. API Endpoints
+## 11. API Endpoints
 
 ### Public (tanpa auth)
 
@@ -544,7 +584,96 @@ Semua password: `password`
 |---|---|---|
 | GET | `/api/me` | Data user yang login + unread_count |
 | POST | `/api/logout` | Logout (hapus token) |
-| GET | `/api/certification-categories` | Daftar kategori + jenis (untuk dropdown form) |
+| GET | `/api/certification-categories` | Daftar kategori + jenis |
+
+### Admin (auth:sanctum + role:admin)
+
+#### Dashboard & Approval
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/dashboard` | Stats global + 5 pending + 5 expiring soon |
+| GET | `/api/admin/approval` | List dokumen pending_approval (filter kategori, departemen) |
+
+#### Dokumen
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/documents` | Semua dokumen (filter: status, kategori, jenis, departemen, search, exp range) |
+| POST | `/api/admin/documents` | Tambah dokumen untuk pegawai (langsung aktif) |
+| GET | `/api/admin/documents/export` | Export Excel (ikut filter) |
+| GET | `/api/admin/documents/{id}` | Detail dokumen |
+| POST | `/api/admin/documents/{id}` | Edit dokumen |
+| DELETE | `/api/admin/documents/{id}` | Hapus dokumen |
+| GET | `/api/admin/documents/{id}/download` | Download file |
+| POST | `/api/admin/documents/{id}/approve` | Approve → status dihitung dari expiry_date |
+| POST | `/api/admin/documents/{id}/reject` | Tolak + alasan wajib |
+
+#### Pegawai
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/pegawai` | List pegawai (filter: search, departemen, status aktif) |
+| POST | `/api/admin/pegawai` | Buat akun pegawai baru |
+| GET | `/api/admin/pegawai/{id}` | Detail pegawai |
+| POST | `/api/admin/pegawai/{id}` | Update data pegawai |
+| DELETE | `/api/admin/pegawai/{id}` | Hapus pegawai + semua dokumennya |
+| POST | `/api/admin/pegawai/{id}/toggle-active` | Aktifkan / nonaktifkan akun |
+| POST | `/api/admin/pegawai/{id}/reset-password` | Reset password pegawai |
+
+#### Departemen
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/departemen` | List departemen + jumlah pegawai |
+| POST | `/api/admin/departemen` | Tambah departemen |
+| PUT | `/api/admin/departemen/{id}` | Edit nama departemen |
+| DELETE | `/api/admin/departemen/{id}` | Hapus (gagal jika ada pegawai aktif) |
+
+#### Kategori Sertifikasi
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/kategori` | List kategori + jenis |
+| POST | `/api/admin/kategori/{cat}/types` | Tambah jenis sertifikasi |
+| PUT | `/api/admin/kategori/{cat}/types/{type}` | Edit jenis sertifikasi |
+| DELETE | `/api/admin/kategori/{cat}/types/{type}` | Hapus (gagal jika dipakai dokumen) |
+
+#### Notifikasi Admin
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/notifications` | List notifikasi + unread_count |
+| POST | `/api/admin/notifications/read-all` | Tandai semua dibaca |
+| POST | `/api/admin/notifications/{id}/read` | Tandai satu dibaca |
+
+#### Audit Trail
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/audit` | Log aktivitas (server-side pagination, filter: search, activity_type, date_from, date_to) |
+| GET | `/api/admin/audit/types` | List tipe aktivitas yang tersedia |
+
+#### Manajemen Admin
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/admins` | List semua akun admin |
+| POST | `/api/admin/admins` | Buat admin baru |
+| PUT | `/api/admin/admins/{id}` | Update nama/email admin |
+| DELETE | `/api/admin/admins/{id}` | Hapus admin (tidak bisa hapus diri sendiri) |
+| POST | `/api/admin/admins/{id}/reset-password` | Reset password admin lain |
+
+#### Pengaturan Sistem
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/pengaturan/reminders` | List jadwal reminder |
+| POST | `/api/admin/pengaturan/reminders` | Tambah jadwal baru |
+| PATCH | `/api/admin/pengaturan/reminders/{id}/toggle` | Toggle aktif/nonaktif |
+| DELETE | `/api/admin/pengaturan/reminders/{id}` | Hapus jadwal |
+| GET | `/api/admin/pengaturan/email-templates` | List template email |
+| PUT | `/api/admin/pengaturan/email-templates/{id}` | Update template email |
 
 ### Pegawai (auth:sanctum + role:pegawai)
 
@@ -552,106 +681,125 @@ Semua password: `password`
 |---|---|---|
 | GET | `/api/pegawai/dashboard` | Stats dokumen + 5 notifikasi terbaru |
 | GET | `/api/pegawai/profile` | Data profil |
-| POST | `/api/pegawai/profile` | Update HP + foto (multipart/form-data) |
+| POST | `/api/pegawai/profile` | Update HP + foto |
 | PUT | `/api/pegawai/password` | Ganti password |
-| GET | `/api/pegawai/documents` | List dokumen (`?status=aktif`) — dipakai juga oleh Dashboard untuk card Sertifikat Terakhir |
+| GET | `/api/pegawai/documents` | List dokumen (semua, client-side filter) |
 | POST | `/api/pegawai/documents` | Upload dokumen baru |
-| GET | `/api/pegawai/documents/export` | Export Excel (`?status=aktif`) |
-| GET | `/api/pegawai/documents/{id}` | Detail dokumen |
+| GET | `/api/pegawai/documents/export` | Export Excel |
+| GET | `/api/pegawai/documents/{id}` | Detail dokumen (+ `file_path`, `file_mime`) |
 | POST | `/api/pegawai/documents/{id}` | Edit dokumen |
 | DELETE | `/api/pegawai/documents/{id}` | Hapus dokumen |
-| GET | `/api/pegawai/documents/{id}/download` | Download file |
+| GET | `/api/pegawai/documents/{id}/download` | Download file (auth via Bearer token) |
 | GET | `/api/pegawai/notifications` | List notifikasi + unread_count |
 | POST | `/api/pegawai/notifications/read-all` | Tandai semua dibaca |
 | POST | `/api/pegawai/notifications/{id}/read` | Tandai satu dibaca |
 
-### Admin (belum dibangun)
-
-Endpoint admin belum ada. Layout dan placeholder dashboard sudah ada, menu sidebar admin sudah terdefinisi (Dashboard, Dokumen, Approval, Pegawai, Departemen, Kategori Sertifikasi, Pengaturan Sistem, Audit Trail).
-
 ---
 
-## 11. Status Implementasi
+## 12. Status Implementasi
 
 ### Selesai ✅
 
+#### Infrastructure & Auth
 | Fitur | Keterangan |
 |---|---|
 | Setup project | Laravel 13 + PostgreSQL + Vue 3 + Tailwind v4 |
-| Database migrations | 14 tabel, semua ter-migrate |
-| Models & Relationships | 12 model, semua relasi sudah didefinisikan |
-| Seeders | User, departemen, kategori, jadwal reminder, dokumen, notifikasi |
-| Auth | Login, logout, lupa password, reset password, redirect by role |
-| Middleware role | EnsureRole untuk guard endpoint |
-| UI Redesign — Modern Bold | Topbar + sidebar merah Pertamina, card-elevated, warna Lime #ACC42A untuk status aktif |
-| Layout sistem | AppTopbar (merah, tanpa user dropdown) + AppSidebar (vertikal kiri, full height, profil+logout+FAQ di bawah) |
-| Halaman Login | Layout 70/30, gambar kiri, form kanan, konsisten design system |
-| ForgotPassword & ResetPassword | Diperbarui: warna Pertamina konsisten, layout card elevated |
-| Dashboard Pegawai | Header avatar + 6 stat card (dengan icon per status) + quick actions + 2 kolom (notifikasi + sertifikat terakhir) |
-| Dokumen Saya | List + filter status + upload + edit + hapus + download + export Excel |
-| Detail Dokumen | Status badge, alasan tolak, riwayat file versi |
-| Form Dokumen | Dropdown kategori dinamis, drag & drop file |
-| Notifikasi Pegawai | List + mark read + mark all + link ke dokumen |
-| Profil Pegawai | Edit HP + foto + ganti password |
-| Export Excel | Per pegawai (filter status) + endpoint admin siap |
-| Modal Logout | Konfirmasi "Yakin ingin keluar?" dengan dua tombol di sidebar |
-| Global `.card-elevated` | CSS class reusable untuk semua card dengan border tegas + shadow |
+| Database | 16 migration, 12 model, semua relasi |
+| Seeders | User, departemen, kategori, reminder, dokumen + dummy file, notifikasi |
+| Auth | Login, logout, forgot/reset password, redirect by role |
+| Middleware | EnsureRole, API 401 JSON (bukan redirect login) |
+| Docker/Podman | Multi-stage Dockerfile, docker-compose.yml, nginx, supervisord, start.sh |
 
-### Belum Dibangun ❌
-
-| Fitur | Prioritas |
+#### Role Pegawai
+| Fitur | Keterangan |
 |---|---|
-| Dashboard Admin (stats + breakdown HSSE/Aviasi + filter dept) | Tinggi |
-| Approval dokumen (approve/tolak + alasan) | Tinggi |
-| CRUD Pegawai (tambah, edit, nonaktifkan, reset password) | Tinggi |
-| CRUD Departemen | Sedang |
-| CRUD Kategori Sertifikasi | Sedang |
-| Kelola Admin (multi-admin) | Sedang |
-| Pengaturan Sistem (jadwal reminder, template email, upload settings) | Sedang |
-| Audit Trail UI | Sedang |
-| Notifikasi Admin (bell + halaman) | Sedang |
-| Scheduled Job reminder (cron harian kirim email + notif otomatis) | Tinggi |
-| Kirim email reminder otomatis | Tinggi |
-| Export Excel Admin (semua pegawai + filter) | Sedang |
+| UI — Modern Bold | Topbar + sidebar merah `#ED1B2F`, `.card-elevated`, Lime `#ACC42A` |
+| Sidebar FAQ | FAQ dinamis per halaman, FAQ panel = modal popup dengan backdrop blur |
+| Dashboard | 6 stat card, donut chart SVG, search, 4-panel bawah |
+| Dokumen Saya | Filter multi client-side, toggle grid/list, export Excel |
+| Detail Dokumen | 2 kolom: info kiri + preview file kanan (image/PDF/download) |
+| Form Dokumen | 2 kolom: form kiri + preview real-time kanan |
+| Notifikasi | Card per item, icon besar, badge tipe, border accent unread |
+| Profil | 2 kolom: data diri kiri + keamanan kanan |
+
+#### Role Admin
+| Fitur | Keterangan |
+|---|---|
+| Dashboard | Stats global + list pending approval + list expiring soon |
+| Dokumen | CRUD semua dokumen, filter + departemen, export Excel ikut filter |
+| Detail Dokumen | Tombol approve/tolak di header, info pegawai |
+| Form Dokumen | Dropdown pilih pegawai, auto-aktif saat admin input |
+| Approval | List pending, filter kategori + departemen, modal approve + tolak |
+| Pegawai | CRUD, toggle aktif, reset password, badge dokumen per baris |
+| Form Pegawai | Nama, email, NIP, HP, departemen, password, toggle status |
+| Departemen | CRUD via modal, tampilkan jumlah pegawai, hapus diblokir jika ada pegawai aktif |
+| Kategori Sertifikasi | 2 panel HSSE & Aviasi, edit inline, hapus diblokir jika dipakai dokumen |
+| Audit Trail | Server-side pagination, expand row old vs new values, filter |
+| Manajemen Admin | CRUD akun admin, hapus diblokir untuk akun sendiri |
+| Pengaturan Sistem | Tab: Jadwal Reminder (toggle aktif) + Template Email |
+| Notifikasi Admin | List + mark as read (bell di topbar aktif) |
+| Profil Admin | Ganti password |
+
+#### Backend Automation
+| Fitur | Keterangan |
+|---|---|
+| Scheduled Reminder | `php artisan reminders:send` — daily via `routes/console.php` |
+| Deduplication | Cek `reminder_logs` sebelum kirim, skip jika sudah dikirim |
+| Auto-update Expired | Update status aktif/segera_expired → expired saat command berjalan |
+
+### Belum Diimplementasi ❌
+
+| Fitur | Keterangan |
+|---|---|
+| Kirim email reminder | Backend command hanya kirim notifikasi in-app. Email butuh konfigurasi SMTP/mailer. |
+| Export Excel Admin di Dashboard | Export sudah ada di halaman Dokumen, belum di Dashboard. |
 
 ---
 
-## 12. Yang Perlu Dilanjutkan
+## 13. Catatan untuk Developer
 
-### Prioritas Pertama — Dashboard & Approval Admin
+### Aturan Wajib
 
-1. **Buat controller admin** di `app/Http/Controllers/Admin/`
-2. **Tambah route group** `middleware('role:admin')->prefix('admin')` di `api.php`
-3. **Dashboard admin endpoint** — query stats total pegawai, dokumen per status, breakdown per kategori HSSE/Aviasi, filter per departemen
-4. **Approval endpoint** — `POST /api/admin/documents/{id}/approve` dan `POST /api/admin/documents/{id}/reject`
-5. **Update halaman** `pages/admin/Dashboard.vue` dengan stat cards (ikuti pola Dashboard pegawai)
-6. **Buat halaman** `pages/admin/Approval.vue`
+- **Sebelum membuat UI baru** — baca `PHILOSOPHY.md` v2.0.
+- **`file_path` dan `file_mime`** sudah di-return di response API dokumen — gunakan untuk preview, jangan hardcode extension.
+- **Preview image** via `/storage/{file_path}` langsung. **Preview/download PDF** harus via axios + Bearer token → Blob.
+- **Semua filter Dokumen** berjalan client-side dari satu fetch awal — jangan tambah request per filter.
+- **`useFaq([...])`** — wajib dipanggil di setiap halaman baru untuk set FAQ kontekstual.
+- **`.card-elevated`** adalah class global — jangan hardcode border/shadow per komponen.
+- **`Storage::url()`** wajib untuk semua URL file/avatar dari backend.
 
-### Prioritas Kedua — CRUD Master Data
+### Docker
 
-7. `pages/admin/Pegawai.vue` + `PegawaiForm.vue`
-8. `pages/admin/Departemen.vue`
-9. `pages/admin/Kategori.vue`
+- Image pakai prefix `docker.io/` karena `registries.conf` tidak punya unqualified-search. Jangan hapus prefix ini.
+- Named volume `storage_public` menyimpan avatar + file sertifikat. Jangan mount ulang tanpa backup.
+- `APP_KEY` di `docker-compose.yml` sudah di-set — jangan generate ulang kecuali fresh deploy.
 
-### Prioritas Ketiga — Sistem Otomatis
+### Pola Admin Controller
 
-10. **Laravel Scheduled Command** untuk kirim reminder harian
-    - Query dokumen approved yang `expiry_date` cocok dengan jadwal di `reminder_schedules`
-    - Insert ke `notifications` (in_app + email)
-    - Insert ke `reminder_logs` (prevent duplicate)
-11. **Email template** — pakai `email_templates` dari DB, parse placeholder `{Nama Pegawai}` dll
+Semua controller admin mengikuti pola yang sama:
+- `abort_if($model->role !== 'expected_role', 404)` untuk validasi role
+- `ActivityLog::record(...)` setelah setiap operasi mutasi
+- Response selalu JSON, tidak ada redirect
 
-### Catatan Penting untuk Developer Berikutnya
+### Pola Frontend Admin
 
-- **Saat membuat UI baru**, selalu baca `PHILOSOPHY.md` v1.1 terlebih dahulu. Topbar dan sidebar sudah merah — komponen baru harus konsisten dengan palet ini.
-- **Sidebar admin** di `AdminLayout.vue` sudah punya 8 menu siap (Dashboard, Dokumen, Approval, Pegawai, Departemen, Kategori, Pengaturan, Audit Trail) — tinggal buat halaman dan route-nya.
-- **`DocumentsExport.php`** sudah siap untuk export admin — tinggal buat endpoint dan tombol di UI.
-- **`EnsureRole` middleware** sudah ada — untuk admin cukup pakai `middleware('role:admin')`.
-- **`Storage::url()`** wajib digunakan setiap kali return URL avatar/file dari backend.
-- **`.card-elevated`** adalah class global yang harus dipakai untuk semua card konten. Jangan hardcode `border` dan `box-shadow` per komponen.
-- **Warna status Aktif** sekarang `#ACC42A` (Lime Pertamina), bukan `#16A34A`. Ini sudah diupdate di `useDocumentHelpers.js` dan terdokumentasi di `PHILOSOPHY.md`.
-- **Dashboard menggunakan 2 API call** saat load: `GET /api/pegawai/dashboard` untuk stats + notifikasi, dan `GET /api/pegawai/documents` untuk card sertifikat terakhir. Ini by design — endpoint dashboard tidak mengembalikan list dokumen lengkap.
+- Semua data di-fetch sekali saat `onMounted`, filter berjalan client-side
+- **Kecuali Audit Trail** — satu-satunya halaman dengan server-side pagination
+- Modal selalu pakai `backdrop-filter:blur(2px)` + `background:rgba(0,0,0,0.40)`
+- `useFaq([...])` dipanggil di setiap halaman admin
+
+### Menambah Tipe Reminder Baru
+
+1. Admin buka Pengaturan Sistem → Tab Jadwal Reminder → klik Tambah
+2. Masukkan H-X dan tingkat urgensi
+3. Command `reminders:send` akan otomatis memproses jadwal baru
+
+### Menambah Template Email
+
+1. Template dibuat secara otomatis oleh sistem saat notifikasi jenis baru pertama kali dikirim
+2. Edit via Pengaturan Sistem → Tab Template Email
+3. Gunakan placeholder `{Nama Pegawai}`, `{Nama Sertifikasi}`, dll
 
 ---
 
-*Dokumen ini diperbarui pada 8 September 2026 setelah UI Redesign Modern Bold. Update dokumen ini setiap kali ada perubahan signifikan pada arsitektur, UI, atau fitur.*
+*Dokumen ini diperbarui pada 11 September 2026. Versi 2.0: dokumentasi lengkap Sprint 1–4, mencakup seluruh fitur admin dan pegawai yang sudah selesai diimplementasi.*

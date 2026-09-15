@@ -10,16 +10,22 @@
         />
 
         <!-- ── Area bawah: sidebar kiri + konten ── -->
-        <div class="flex gap-3 flex-1 relative">
+        <div class="flex gap-3 flex-1">
 
-            <!-- Sidebar vertikal kiri -->
+            <!-- Sidebar vertikal kiri (fixed, scroll-aware) -->
+            <!-- topbarOffset = h-14(56) + p-3 wrapper top(12) + gap-3(12) = 80px -->
             <AppSidebar
                 :menu-groups="menuGroups"
                 :faqs="pageFaqs"
                 :user="auth.user"
                 profile-route="pegawai.profile"
+                :topbar-offset="80"
                 @logout="handleLogout"
+                @width-change="sidebarWidth = $event"
             />
+
+            <!-- Spacer yang mengikuti lebar sidebar agar konten tidak tertutup -->
+            <div class="shrink-0 transition-all duration-200" :style="{ width: sidebarWidth + 'px' }"></div>
 
             <!-- Konten halaman -->
             <main class="flex-1 min-w-0">
@@ -42,6 +48,7 @@ const auth   = useAuthStore();
 const router = useRouter();
 
 const unreadCount = ref(0);
+const sidebarWidth = ref(64); // default collapsed
 
 // ── FAQ dinamis per halaman ────────────────────────────
 const pageFaqs = ref(null);

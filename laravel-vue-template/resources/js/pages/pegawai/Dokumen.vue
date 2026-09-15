@@ -301,7 +301,7 @@
         </div>
 
         <!-- ── List View ──────────────────────────────────── -->
-        <div v-else class="space-y-3">
+        <div v-else class="space-y-2">
             <div
                 v-for="doc in filteredDocs"
                 :key="doc.id"
@@ -310,68 +310,87 @@
                 <div class="flex">
                     <!-- Accent bar kiri -->
                     <div class="w-1 shrink-0" :style="{ background: getStatusConfig(doc.status).accentColor }"></div>
-                    <div class="flex-1 p-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <h3 class="text-sm font-bold" style="color:#111827;">{{ doc.certification_type?.name }}</h3>
-                                    <span class="text-xs" style="color:#D1D5DB;">·</span>
-                                    <span class="text-xs font-semibold" style="color:#6B7280;">{{ doc.certification_type?.category?.name }}</span>
-                                </div>
-                                <p v-if="doc.certificate_number" class="text-xs font-medium mt-0.5" style="color:#9CA3AF;">No. {{ doc.certificate_number }}</p>
+
+                    <!-- KIRI: Identitas dokumen -->
+                    <div class="flex-1 px-4 py-3 min-w-0 flex flex-col justify-center">
+                        <h3 class="text-sm font-bold leading-snug" style="color:#111827;">{{ doc.certification_type?.name }}</h3>
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span class="text-xs font-semibold px-1.5 py-0.5 rounded" style="background:#F3F4F6; color:#6B7280;">{{ doc.certification_type?.category?.name }}</span>
+                            <template v-if="doc.certificate_number">
+                                <span class="text-xs" style="color:#D1D5DB;">·</span>
+                                <span class="text-xs" style="color:#9CA3AF;">No. <span class="font-semibold" style="color:#6B7280;">{{ doc.certificate_number }}</span></span>
+                            </template>
+                        </div>
+                        <div v-if="doc.issued_date" class="mt-1">
+                            <span class="text-xs" style="color:#9CA3AF;">Terbit: <span style="color:#6B7280;">{{ formatDate(doc.issued_date) }}</span></span>
+                        </div>
+                        <div v-if="doc.status === 'ditolak' && doc.rejection_reason" class="mt-1.5 text-xs rounded-lg px-2.5 py-1.5 font-medium" style="background:#FCE7F3; color:#9D174D;">
+                            <span class="font-bold">Ditolak:</span> {{ doc.rejection_reason }}
+                        </div>
+                    </div>
+
+                    <!-- TENGAH: Info tanggal & countdown -->
+                    <div class="w-36 shrink-0 border-l flex flex-col justify-center px-4 py-3" style="border-color:#F3F4F6;">
+                        <p class="text-xs font-medium" style="color:#9CA3AF;">Kadaluarsa</p>
+                        <p class="text-xs font-bold mt-0.5" :style="{ color: getStatusConfig(doc.status).accentColor }">{{ formatDate(doc.expiry_date) }}</p>
+                        <template v-if="['aktif','segera_expired'].includes(doc.status)">
+                            <div class="flex items-baseline gap-1 mt-1">
+                                <span class="text-lg font-black leading-none" :style="{ color: getStatusConfig(doc.status).accentColor }">{{ daysUntilExpiry(doc.expiry_date) }}</span>
+                                <span class="text-xs font-medium" style="color:#9CA3AF;">hari lagi</span>
                             </div>
-                            <span
-                                class="shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
-                                :style="getStatusConfig(doc.status).badgeStyle"
-                            >{{ getStatusConfig(doc.status).label }}</span>
-                        </div>
+                        </template>
+                        <template v-else-if="doc.status === 'expired'">
+                            <p class="text-xs font-bold mt-1" style="color:#ED1B2F;">Sudah Kadaluarsa</p>
+                        </template>
+                        <template v-else-if="doc.status === 'pending_approval'">
+                            <p class="text-xs font-semibold mt-1" style="color:#6B7280;">Menunggu Approval</p>
+                        </template>
+                        <template v-else-if="doc.status === 'ditolak'">
+                            <p class="text-xs font-bold mt-1" style="color:#DB2777;">Ditolak</p>
+                        </template>
+                    </div>
 
-                        <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-semibold" style="color:#6B7280;">
-                            <span v-if="doc.issued_date">Terbit: <span class="font-bold" style="color:#374151;">{{ formatDate(doc.issued_date) }}</span></span>
-                            <span>Kadaluarsa: <span class="font-bold" :style="{ color: getStatusConfig(doc.status).accentColor }">{{ formatDate(doc.expiry_date) }}</span></span>
-                            <span v-if="['aktif','segera_expired'].includes(doc.status)" class="font-bold" :style="{ color: getStatusConfig(doc.status).accentColor }">
-                                {{ daysUntilExpiry(doc.expiry_date) }} hari lagi
-                            </span>
-                        </div>
-
-                        <div v-if="doc.status === 'ditolak' && doc.rejection_reason" class="mt-3 text-xs rounded-lg px-3 py-2 font-medium" style="background:#FCE7F3; color:#9D174D;">
-                            <span class="font-bold">Alasan ditolak:</span> {{ doc.rejection_reason }}
-                        </div>
-
-                        <!-- Actions List -->
-                        <div class="mt-4 flex items-center gap-2 pt-3 border-t flex-wrap" style="border-color:#F3F4F6;">
+                    <!-- KANAN: Status badge + tombol aksi 2x2 -->
+                    <div class="w-44 shrink-0 border-l flex flex-col justify-center gap-1.5 px-3 py-3" style="border-color:#F3F4F6;">
+                        <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold self-center mb-0.5"
+                            :style="getStatusConfig(doc.status).badgeStyle">{{ getStatusConfig(doc.status).label }}</span>
+                        <!-- Baris 1: Detail + Edit -->
+                        <div class="grid grid-cols-2 gap-1">
                             <RouterLink
                                 :to="{ name: 'pegawai.dokumen.detail', params: { id: doc.id } }"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                                class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
                                 style="background:#EFF6FF; color:#006CB8;"
                             >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                Lihat Detail
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                Detail
                             </RouterLink>
                             <RouterLink
                                 :to="{ name: 'pegawai.dokumen.edit', params: { id: doc.id } }"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                                class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
                                 style="background:#F3F4F6; color:#374151;"
                             >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 Edit
                             </RouterLink>
+                        </div>
+                        <!-- Baris 2: Download (jika ada) + Hapus -->
+                        <div class="grid gap-1" :class="doc.has_file ? 'grid-cols-2' : 'grid-cols-1'">
                             <a
                                 v-if="doc.has_file"
                                 :href="`/api/pegawai/documents/${doc.id}/download`"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                                class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
                                 style="background:#F3F4F6; color:#374151;"
                                 target="_blank"
                             >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                Download
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                Unduh
                             </a>
                             <button
                                 @click="confirmDelete(doc)"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                                class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
                                 style="background:#FEE2E2; color:#ED1B2F;"
                             >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 Hapus
                             </button>
                         </div>

@@ -2,7 +2,7 @@
     <aside
         class="sidebar flex flex-col shrink-0"
         :class="collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'"
-        style="background:#ED1B2F; border-radius:16px; position:sticky; top:12px; height:calc(100vh - 90px);"
+        :style="sidebarStyle"
     >
         <!-- ── Toggle collapse button ──────────────────────── -->
         <div class="flex items-center shrink-0" :class="collapsed ? 'justify-center px-0 pt-3 pb-1' : 'justify-end px-2.5 pt-3 pb-1'">
@@ -235,14 +235,16 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 
 const props = defineProps({
-    menuGroups:   { type: Array,  required: true },
-    user:         { type: Object, default: null },
-    profileRoute: { type: String, default: null },
-    faqs:         { type: Array,  default: null },
+    menuGroups:    { type: Array,  required: true },
+    user:          { type: Object, default: null },
+    profileRoute:  { type: String, default: null },
+    faqs:          { type: Array,  default: null },
+    // tinggi topbar + gap di atas sidebar (px), dikirim dari layout
+    topbarOffset:  { type: Number, default: 68 },
 });
 
 const emit = defineEmits(['logout', 'width-change']);
@@ -251,6 +253,33 @@ const route = useRoute();
 const showFaq         = ref(false);
 const showLogoutModal = ref(false);
 const collapsed       = ref(true);
+
+// ── Scroll-aware sidebar position ────────────────────────
+const scrollY = ref(typeof window !== 'undefined' ? window.scrollY : 0);
+
+function onScroll() {
+    scrollY.value = window.scrollY;
+}
+
+onMounted(() => { window.addEventListener('scroll', onScroll, { passive: true }); });
+onUnmounted(() => { window.removeEventListener('scroll', onScroll); });
+
+// Saat topbar belum ter-scroll: sidebar offset dari topbar (top/left/bottom = 12px + gap)
+// Saat topbar sudah ter-scroll: sidebar full height flush ke tepi viewport (top/left/bottom = 0)
+// topbarOffset = jarak viewport-top ke bawah topbar = p-3(12) + h-14(56) + gap-3(12) = 80px
+const sidebarStyle = computed(() => {
+    const scrolled = scrollY.value >= props.topbarOffset;
+    return {
+        background:    '#ED1B2F',
+        position:      'fixed',
+        left:          scrolled ? '0px' : '12px',
+        top:           scrolled ? '0px' : `${props.topbarOffset}px`,
+        bottom:        scrolled ? '0px' : '12px',
+        borderRadius:  scrolled ? '0 16px 16px 0' : '16px',
+        transition:    'top 200ms ease, bottom 200ms ease, left 200ms ease, border-radius 200ms ease',
+        zIndex:        10,
+    };
+});
 
 function toggleCollapsed() {
     collapsed.value = !collapsed.value;
