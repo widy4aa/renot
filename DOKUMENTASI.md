@@ -1,9 +1,9 @@
 # DOKUMENTASI TEKNIS — ReNot
 ## Reminder & Notification Sertifikasi Pegawai
 
-**Versi dokumen:** 2.0
-**Terakhir diperbarui:** 11 September 2026
-**Status project:** Sprint 4 selesai — Seluruh fitur Admin & Pegawai selesai dibangun
+**Versi dokumen:** 2.1
+**Terakhir diperbarui:** 23 September 2026
+**Status project:** Sprint 5 — Mail Config SMTP, Docker fix PHP 8.4, env separation
 
 ---
 
@@ -45,6 +45,7 @@ ReNot adalah aplikasi internal perusahaan (konteks Pertamina) untuk memantau mas
 | Layer | Teknologi | Versi |
 |---|---|---|
 | Backend | Laravel | 13.x |
+| PHP | PHP | 8.4 |
 | Database | PostgreSQL | 16 (via Docker/Podman container) |
 | Auth | Laravel Sanctum | 4.x |
 | Frontend | Vue 3 (Composition API) | Latest |
@@ -119,8 +120,10 @@ php artisan reminders:send
 
 ```
 laravel-vue-template/
-├── Dockerfile                  ← Multi-stage build (composer → node → php-fpm-nginx)
+├── Dockerfile                  ← Multi-stage build (composer → node → php:8.4-fpm-alpine)
 ├── docker-compose.yml          ← 2 service: app + db
+├── .env.docker                 ← Env production untuk Docker (tidak di-commit, lihat .env.docker.example)
+├── .env.docker.example         ← Template kosong — di-commit sebagai referensi tim
 ├── .dockerignore
 └── docker/
     ├── nginx/default.conf      ← Nginx port 8000, SPA catch-all, storage alias
@@ -129,41 +132,56 @@ laravel-vue-template/
     └── start.sh                ← Entrypoint: wait DB → migrate → cache → start
 ```
 
+### Setup .env Docker (wajib sebelum pertama kali deploy)
+
+```bash
+# Copy template dan isi nilai yang sesuai
+cp .env.docker.example .env.docker
+
+# Edit .env.docker — minimal isi:
+#   APP_KEY=base64:...  (generate: php artisan key:generate --show)
+#   DB_PASSWORD=...
+#   MAIL_USERNAME=... MAIL_PASSWORD=...
+```
+
 ### Build & Run
 
 ```bash
 cd laravel-vue-template
 
 # Build image dan jalankan semua service
-podman compose up -d --build
+podman-compose up -d --build
 
 # Lihat log
-podman compose logs -f app
-podman compose logs -f db
+podman-compose logs -f app
+podman-compose logs -f db
 
 # Seed database (pertama kali setelah container jalan)
-podman compose exec app php artisan db:seed
+podman-compose exec app php artisan db:seed
 
 # Reset database
-podman compose exec app php artisan migrate:fresh --seed
+podman-compose exec app php artisan migrate:fresh --seed
 
 # Stop semua container
-podman compose down
+podman-compose down
 ```
+
+> **Gunakan `podman-compose`** (bukan `podman compose`) — tool yang tersedia di sistem ini.
 
 ### Akses setelah deploy
 
 | Service | URL |
 |---|---|
 | Aplikasi ReNot | `http://127.0.0.1:8000` |
-| PostgreSQL | `127.0.0.1:5432` |
+| PostgreSQL (host) | `127.0.0.1:5433` ← port 5433 (bukan 5432, untuk hindari konflik dengan PostgreSQL lokal) |
 
 ### Catatan Podman
 
 - Semua image pakai prefix `docker.io/` (wajib jika `registries.conf` tidak punya unqualified-search)
 - `podman-compose` kompatibel dengan `docker-compose.yml` v3
 - Storage avatar dan file sertifikat di-mount ke named volume — tidak hilang saat container di-recreate
-- `APP_KEY` di `docker-compose.yml` sudah di-set — jangan generate ulang kecuali fresh deploy
+- **Port PostgreSQL di host adalah `5433`** (container internal tetap 5432). App service tetap pakai `DB_HOST=db` + `DB_PORT=5432` — port mapping hanya untuk akses dari luar container.
+- Env diambil dari `.env.docker` via `env_file:` — jangan hardcode credentials di `docker-compose.yml`
 
 ### Scheduler di Production
 
@@ -352,7 +370,7 @@ Untuk API, unauthenticated request return **401 JSON** (bukan redirect ke login)
 | `AuditController` | List activity_logs dengan server-side pagination + filter |
 | `ManajemenAdminController` | CRUD akun admin. Tidak bisa hapus diri sendiri. |
 | `NotificationController` | Notifikasi in-app admin + markAsRead + markAllAsRead |
-| `PengaturanController` | CRUD reminder_schedules + toggle aktif. CRUD email_templates. |
+| `PengaturanController` | CRUD reminder_schedules + toggle aktif. CRUD email_templates. CRUD mail config SMTP (profile, activate, test). |
 
 ### Approve vs Reject Logic
 
@@ -669,11 +687,17 @@ Semua password: `password`
 | Method | Endpoint | Fungsi |
 |---|---|---|
 | GET | `/api/admin/pengaturan/reminders` | List jadwal reminder |
-| POST | `/api/admin/pengaturan/reminders` | Tambah jadwal baru |
-| PATCH | `/api/admin/pengaturan/reminders/{id}/toggle` | Toggle aktif/nonaktif |
+| POST | `/api/admin/pengaturan/reminders` | Tambah jadwal baru (`days_before`, `urgency`: rendah/sedang/tinggi/sangat_tinggi) |
+| PATCH | `/api/admin/pengaturan/reminders/{id}/toggle` | Toggle aktif/nonaktif jadwal |
 | DELETE | `/api/admin/pengaturan/reminders/{id}` | Hapus jadwal |
 | GET | `/api/admin/pengaturan/email-templates` | List template email |
-| PUT | `/api/admin/pengaturan/email-templates/{id}` | Update template email |
+| PUT | `/api/admin/pengaturan/email-templates/{id}` | Update template email (`subject`, `body`) |
+| GET | `/api/admin/pengaturan/mail-configs` | List profile SMTP (password tidak dikembalikan) |
+| POST | `/api/admin/pengaturan/mail-configs` | Tambah profile SMTP baru |
+| PUT | `/api/admin/pengaturan/mail-configs/{id}` | Update profile SMTP (password opsional — kosong = pakai password lama) |
+| DELETE | `/api/admin/pengaturan/mail-configs/{id}` | Hapus profile (gagal jika sedang aktif) |
+| POST | `/api/admin/pengaturan/mail-configs/{id}/activate` | Jadikan profile ini aktif (nonaktifkan yang lain) |
+| POST | `/api/admin/pengaturan/mail-configs/{id}/test` | Kirim email uji ke `test_email` tanpa mengaktifkan profile |
 
 ### Pegawai (auth:sanctum + role:pegawai)
 
@@ -736,7 +760,7 @@ Semua password: `password`
 | Kategori Sertifikasi | 2 panel HSSE & Aviasi, edit inline, hapus diblokir jika dipakai dokumen |
 | Audit Trail | Server-side pagination, expand row old vs new values, filter |
 | Manajemen Admin | CRUD akun admin, hapus diblokir untuk akun sendiri |
-| Pengaturan Sistem | Tab: Jadwal Reminder (toggle aktif) + Template Email |
+| Pengaturan Sistem | Tab: Jadwal Reminder (toggle aktif) + Template Email + **Mail Config SMTP** |
 | Notifikasi Admin | List + mark as read (bell di topbar aktif) |
 | Profil Admin | Ganti password |
 
@@ -746,12 +770,13 @@ Semua password: `password`
 | Scheduled Reminder | `php artisan reminders:send` — daily via `routes/console.php` |
 | Deduplication | Cek `reminder_logs` sebelum kirim, skip jika sudah dikirim |
 | Auto-update Expired | Update status aktif/segera_expired → expired saat command berjalan |
+| Mail Config SMTP | Admin kelola profile SMTP via UI. Email approve/reject otomatis dikirim ke pegawai. |
+| Email Reminder | Saat approve/reject dokumen, email dikirim ke pegawai menggunakan active mail config |
 
 ### Belum Diimplementasi ❌
 
 | Fitur | Keterangan |
 |---|---|
-| Kirim email reminder | Backend command hanya kirim notifikasi in-app. Email butuh konfigurasi SMTP/mailer. |
 | Export Excel Admin di Dashboard | Export sudah ada di halaman Dokumen, belum di Dashboard. |
 
 ---
@@ -772,7 +797,9 @@ Semua password: `password`
 
 - Image pakai prefix `docker.io/` karena `registries.conf` tidak punya unqualified-search. Jangan hapus prefix ini.
 - Named volume `storage_public` menyimpan avatar + file sertifikat. Jangan mount ulang tanpa backup.
-- `APP_KEY` di `docker-compose.yml` sudah di-set — jangan generate ulang kecuali fresh deploy.
+- **Env production** diambil dari `.env.docker` (bukan `.env`). Copy dari `.env.docker.example` lalu isi credentials.
+- **Port PostgreSQL host = `5433`** (bukan 5432). Di dalam container-to-container tetap pakai `DB_HOST=db` + port 5432.
+- Jangan hardcode credentials di `docker-compose.yml` — gunakan `env_file: .env.docker`.
 
 ### Pola Admin Controller
 
@@ -802,4 +829,4 @@ Semua controller admin mengikuti pola yang sama:
 
 ---
 
-*Dokumen ini diperbarui pada 11 September 2026. Versi 2.0: dokumentasi lengkap Sprint 1–4, mencakup seluruh fitur admin dan pegawai yang sudah selesai diimplementasi.*
+*Dokumen ini diperbarui pada 23 September 2026. Versi 2.1: tambah Mail Config SMTP (6 endpoint baru), fix Docker PHP 8.3→8.4, port PostgreSQL host 5432→5433, sistem .env.docker terpisah, update status implementasi email reminder.*

@@ -23,7 +23,7 @@ RUN npm run build
 # ─────────────────────────────────────────────────────────────
 # Stage 2 — PHP: app image (php-fpm + nginx + extensions)
 # ─────────────────────────────────────────────────────────────
-FROM docker.io/php:8.3-fpm-alpine AS app
+FROM docker.io/php:8.4-fpm-alpine AS app
 
 # Sistem dependencies
 RUN apk add --no-cache \
@@ -85,6 +85,11 @@ COPY docker/start.sh /start.sh
 
 # Permissions
 RUN chmod +x /start.sh \
+    && mkdir -p /var/www/html/bootstrap/cache \
+    && mkdir -p /var/www/html/storage/framework/cache/data \
+    && mkdir -p /var/www/html/storage/framework/sessions \
+    && mkdir -p /var/www/html/storage/framework/views \
+    && mkdir -p /var/www/html/storage/logs \
     && chown -R www-data:www-data /var/www/html/storage \
     && chown -R www-data:www-data /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage \
