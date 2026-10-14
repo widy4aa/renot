@@ -229,8 +229,66 @@
             </div>
         </div>
 
-        <!-- ── Row 3: 3 Panel ─────────────────────────────── -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- ── Row 3: 4 Panel ─────────────────────────────── -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+            <!-- Pendaftaran Menunggu -->
+            <div class="card-elevated rounded-xl flex flex-col">
+                <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid #F3F4F6;">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#FEF3C7;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#D97706;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold" style="color:#111827;">Pendaftaran Baru</h3>
+                        <span v-if="stats.pending_registrations > 0" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style="background:#D97706;">
+                            {{ stats.pending_registrations }}
+                        </span>
+                    </div>
+                    <RouterLink :to="{ name: 'admin.pendaftaran' }"
+                        class="text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors" style="color:#ED1B2F;"
+                        onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='transparent'">
+                        Lihat Semua →
+                    </RouterLink>
+                </div>
+                <div v-if="isLoading" class="divide-y" style="border-color:#F3F4F6;">
+                    <div v-for="i in 3" :key="i" class="px-5 py-3.5 animate-pulse flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-200 shrink-0"></div>
+                        <div class="flex-1 space-y-1.5">
+                            <div class="h-2.5 bg-gray-200 rounded w-3/4"></div>
+                            <div class="h-2 bg-gray-100 rounded w-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else-if="pendingRegistrations.length === 0" class="flex-1 flex flex-col items-center justify-center py-10 text-center">
+                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center mb-2" style="background:#F7FEE7;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#ACC42A;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-medium" style="color:#6B7280;">Tidak ada pendaftaran baru</p>
+                </div>
+                <ul v-else class="flex-1">
+                    <li v-for="reg in pendingRegistrations" :key="reg.id"
+                        class="pending-row px-5 py-3.5 cursor-pointer"
+                        @click="router.push({ name: 'admin.pendaftaran' })">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold text-white" style="background:#D97706;">
+                                {{ reg.name?.charAt(0)?.toUpperCase() ?? '?' }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold truncate" style="color:#111827;">{{ reg.name }}</p>
+                                <p class="text-xs mt-0.5 truncate" style="color:#6B7280;">{{ reg.department ?? '-' }} · {{ reg.employee_number }}</p>
+                                <p class="text-xs mt-1 flex items-center gap-1" style="color:#9CA3AF;">
+                                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    {{ timeAgo(reg.registered_at) }}
+                                </p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
 
             <!-- Menunggu Approval -->
             <div class="card-elevated rounded-xl flex flex-col">
@@ -420,6 +478,7 @@ const pendingDocuments  = ref([]);
 const expiringSoon      = ref([]);
 const departmentStats   = ref([]);
 const recentActivities  = ref([]);
+const pendingRegistrations = ref([]);
 
 // ── Stat cards config ─────────────────────────────────
 const statCards = [
@@ -429,6 +488,7 @@ const statCards = [
     { key: 'expired',          label: 'Expired',          accentColor: '#ED1B2F', clickable: false, icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
     { key: 'segera_expired',   label: 'Segera Expired',   accentColor: '#D97706', clickable: false, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     { key: 'aktif',            label: 'Aktif',            accentColor: '#ACC42A', clickable: false, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { key: 'pending_registrations', label: 'Pendaftaran Baru', accentColor: '#D97706', clickable: false, icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' },
 ];
 
 // ── Donut chart config ────────────────────────────────
@@ -482,6 +542,9 @@ const activityMap = {
     pegawai_reset_password: { label: 'Reset Pwd',     style: 'background:#F3F4F6; color:#6B7280;' },
     admin_tambah:           { label: 'Admin Baru',    style: 'background:#EFF6FF; color:#006CB8;' },
     admin_hapus:            { label: 'Hapus Admin',   style: 'background:#FEE2E2; color:#991B1B;' },
+    registrasi_approve:     { label: 'Reg. Setujui',  style: 'background:#F7FEE7; color:#5a6e0f;' },
+    registrasi_reject:      { label: 'Reg. Tolak',    style: 'background:#FCE7F3; color:#DB2777;' },
+    notifikasi_manual:      { label: 'Email Manual',  style: 'background:#EFF6FF; color:#006CB8;' },
 };
 
 function activityBadge(type) {
@@ -530,6 +593,7 @@ async function fetchDashboard() {
         expiringSoon.value     = data.expiring_soon;
         departmentStats.value  = data.department_stats ?? [];
         recentActivities.value = data.recent_activities ?? [];
+        pendingRegistrations.value = data.pending_registrations ?? [];
     } catch (e) {
         console.error('Dashboard admin error:', e);
     } finally {

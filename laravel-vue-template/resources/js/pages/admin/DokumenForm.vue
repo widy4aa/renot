@@ -326,7 +326,7 @@ async function fetchDocument() {
             existingFileName.value = d.file_name;
             existingFileMime.value = d.file_mime;
             if (['image/jpeg','image/jpg','image/png','image/webp'].includes(d.file_mime)) {
-                existingFileUrl.value = `/storage/${d.file_path}`;
+                existingFileUrl.value = d.file_url;
             }
         }
     } catch { /**/ }

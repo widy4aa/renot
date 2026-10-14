@@ -45,7 +45,7 @@ class DocumentController extends Controller
             $query->where('user_id', $request->user_id);
         }
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = str_replace(['%', '_'], ['\\%', '\\_'], $request->search);
             $query->where(fn ($q) => $q
                 ->where('certificate_number', 'ilike', "%{$s}%")
                 ->orWhereHas('owner', fn ($q2) => $q2->where('name', 'ilike', "%{$s}%"))
@@ -80,7 +80,7 @@ class DocumentController extends Controller
             'implementation_date' => ['nullable', 'date'],
             'issued_date' => ['nullable', 'date'],
             'expiry_date' => ['required', 'date'],
-            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ]);
 
         $filePath = $fileName = $fileSize = $fileMime = null;
@@ -149,7 +149,7 @@ class DocumentController extends Controller
             'implementation_date' => ['nullable', 'date'],
             'issued_date' => ['nullable', 'date'],
             'expiry_date' => ['required', 'date'],
-            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ]);
 
         $oldValues = $document->only([
@@ -378,7 +378,7 @@ class DocumentController extends Controller
             'rejection_reason' => $document->rejection_reason,
             'approved_at' => $document->approved_at?->format('Y-m-d H:i'),
             'has_file' => ! is_null($document->file_path),
-            'file_path' => $document->file_path,
+            'file_url' => $document->file_path ? Storage::url($document->file_path) : null,
             'file_mime' => $document->file_mime,
             'file_name' => $document->file_name,
             'file_size' => $document->file_size,

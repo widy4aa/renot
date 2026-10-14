@@ -333,7 +333,7 @@ const allTypes         = ref([]);
 const isSubmitting     = ref(false);
 const errorMessage     = ref('');
 const existingFileName    = ref('');
-const existingFilePath    = ref('');
+const existingFileUrlRef  = ref('');
 const existingFileMime    = ref('');
 const existingBlobUrl     = ref(null);
 const existingPreviewError = ref(false);
@@ -364,8 +364,8 @@ const existingIsPdf = computed(() => {
            existingFileName.value.toLowerCase().endsWith('.pdf');
 });
 const existingFileUrl = computed(() => {
-    if (!existingFilePath.value) return null;
-    return `/storage/${existingFilePath.value}`;
+    if (!existingFileUrlRef.value) return null;
+    return existingFileUrlRef.value;
 });
 
 const form = ref({
@@ -402,7 +402,7 @@ async function fetchDocument() {
         form.value.issued_date           = data.issued_date ?? '';
         form.value.expiry_date           = data.expiry_date ?? '';
         existingFileName.value           = data.file_name ?? '';
-        existingFilePath.value           = data.file_path ?? '';
+        existingFileUrlRef.value         = data.file_url ?? '';
         existingFileMime.value           = data.file_mime ?? '';
 
         // Load PDF blob untuk preview

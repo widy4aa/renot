@@ -82,7 +82,7 @@ class ProfileController extends Controller
         }
 
         $user->update([
-            'password' => Hash::make($request->password),
+            'password' => $request->password,
         ]);
 
         // Hapus semua token lain supaya sesi lain logout otomatis

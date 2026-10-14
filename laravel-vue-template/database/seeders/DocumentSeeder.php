@@ -5,11 +5,22 @@ namespace Database\Seeders;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 class DocumentSeeder extends Seeder
 {
+    /**
+     * Seed dokumen sertifikasi dummy untuk setiap pegawai.
+     *
+     * File dummy diambil dari folder /sertif/ di root project
+     * dan di-copy ke storage/app/public/documents/.
+     */
     public function run(): void
     {
+        // Pastikan direktori documents ada
+        Storage::disk('public')->makeDirectory('documents');
+
         $adminId = DB::table('users')->where('role', 'admin')->value('id');
 
         $budi = DB::table('users')->where('email', 'budi@renot.app')->first();
@@ -23,10 +34,11 @@ class DocumentSeeder extends Seeder
 
         $now = Carbon::now();
 
-        /**
-         * Budi Santoso — Departemen HSSE
-         * Fokus sertifikasi HSSE, sudah lama kerja, punya banyak dok
-         */
+        // ── Copy dummy files dari sertif/ ke storage ────────
+        $sertifPath = base_path('../sertif');
+        $dummyFiles = $this->prepareDummyFiles($sertifPath);
+
+        // ── Budi Santoso — Departemen HSSE ───────────────────
         $budidocs = [
             // GSI — aktif, masih lama
             [
@@ -93,7 +105,7 @@ class DocumentSeeder extends Seeder
                 'approved_by' => null,
                 'approved_at' => null,
             ],
-            // Lainnya (HSSE) — ditolak, perlu upload ulang
+            // Lainnya (HSSE) — ditolak
             [
                 'user_id' => $budi->id,
                 'certification_type_id' => $types['Lainnya']->id,
@@ -109,10 +121,7 @@ class DocumentSeeder extends Seeder
             ],
         ];
 
-        /**
-         * Siti Rahayu — Departemen Aviasi
-         * Fokus sertifikasi Aviasi, juga punya beberapa HSSE
-         */
+        // ── Siti Rahayu — Departemen Aviasi ──────────────────
         $sitidocs = [
             // RDS — aktif
             [
@@ -181,10 +190,7 @@ class DocumentSeeder extends Seeder
             ],
         ];
 
-        /**
-         * Ahmad Fauzi — Departemen Operasional
-         * Pegawai baru, dokumen masih sedikit
-         */
+        // ── Ahmad Fauzi — Departemen Operasional ─────────────
         $ahmaddocs = [
             // GSI — aktif, baru terbit
             [
@@ -212,7 +218,7 @@ class DocumentSeeder extends Seeder
                 'approved_by' => null,
                 'approved_at' => null,
             ],
-            // AT — expired, belum diperbarui
+            // AT — expired
             [
                 'user_id' => $ahmad->id,
                 'certification_type_id' => $types['AT']->id,
@@ -227,70 +233,7 @@ class DocumentSeeder extends Seeder
             ],
         ];
 
-        // Dummy file dari folder sertif
-        $dummyFiles = [
-            [
-                'path' => 'documents/1674650882446.jpeg',
-                'name' => '1674650882446.jpeg',
-                'size' => 56320,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/1675170725330.jpeg',
-                'name' => '1675170725330.jpeg',
-                'size' => 71680,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/cover_w310_h215_8.png',
-                'name' => 'cover_w310_h215_8.png',
-                'size' => 61440,
-                'mime' => 'image/png',
-            ],
-            [
-                'path' => 'documents/dump_sertif.png',
-                'name' => 'dump_sertif.png',
-                'size' => 73728,
-                'mime' => 'image/png',
-            ],
-            [
-                'path' => 'documents/images (1).jpeg',
-                'name' => 'images (1).jpeg',
-                'size' => 54272,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/images (2).jpeg',
-                'name' => 'images (2).jpeg',
-                'size' => 13312,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/images (3).jpeg',
-                'name' => 'images (3).jpeg',
-                'size' => 24576,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/images.jpeg',
-                'name' => 'images.jpeg',
-                'size' => 29696,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/img_0206202216541563283BKF6.jpg',
-                'name' => 'img_0206202216541563283BKF6.jpg',
-                'size' => 106496,
-                'mime' => 'image/jpeg',
-            ],
-            [
-                'path' => 'documents/Internship-Certificate-PT-Pertamina-UTC-1-320.webp',
-                'name' => 'Internship-Certificate-PT-Pertamina-UTC-1-320.webp',
-                'size' => 14336,
-                'mime' => 'image/webp',
-            ],
-        ];
-
+        // ── Insert semua dokumen dengan dummy file ──────────
         $allDocs = array_merge($budidocs, $sitidocs, $ahmaddocs);
 
         foreach ($allDocs as $i => $doc) {
@@ -304,5 +247,55 @@ class DocumentSeeder extends Seeder
                 'updated_at' => $now,
             ]));
         }
+    }
+
+    /**
+     * Copy file dummy dari folder sertif/ ke storage/app/public/documents/.
+     *
+     * @return array<int, array{path: string, name: string, size: int, mime: string}>
+     */
+    private function prepareDummyFiles(string $sertifPath): array
+    {
+        $sourceFiles = [
+            ['name' => '1674650882446.jpeg', 'mime' => 'image/jpeg'],
+            ['name' => '1675170725330.jpeg', 'mime' => 'image/jpeg'],
+            ['name' => 'cover_w310_h215_8.png', 'mime' => 'image/png'],
+            ['name' => 'dump_sertif.png', 'mime' => 'image/png'],
+            ['name' => 'images (1).jpeg', 'mime' => 'image/jpeg'],
+            ['name' => 'images (2).jpeg', 'mime' => 'image/jpeg'],
+            ['name' => 'images (3).jpeg', 'mime' => 'image/jpeg'],
+            ['name' => 'images.jpeg', 'mime' => 'image/jpeg'],
+            ['name' => 'img_0206202216541563283BKF6.jpg', 'mime' => 'image/jpeg'],
+            ['name' => 'Internship-Certificate-PT-Pertamina-UTC-1-320.webp', 'mime' => 'image/webp'],
+        ];
+
+        $result = [];
+
+        foreach ($sourceFiles as $file) {
+            $source = $sertifPath.'/'.$file['name'];
+
+            if (File::exists($source)) {
+                // Copy ke storage dengan nama asli
+                $storagePath = 'documents/'.$file['name'];
+                Storage::disk('public')->put($storagePath, File::get($source));
+
+                $result[] = [
+                    'path' => $storagePath,
+                    'name' => $file['name'],
+                    'size' => File::size($source),
+                    'mime' => $file['mime'],
+                ];
+            } else {
+                // Fallback jika file sertif tidak ada (misal di Docker)
+                $result[] = [
+                    'path' => 'documents/'.$file['name'],
+                    'name' => $file['name'],
+                    'size' => 50000,
+                    'mime' => $file['mime'],
+                ];
+            }
+        }
+
+        return $result;
     }
 }

@@ -19,6 +19,10 @@ class MailConfig extends Model
         'created_by',
     ];
 
+    protected $hidden = [
+        'mail_password',
+    ];
+
     protected function casts(): array
     {
         return [

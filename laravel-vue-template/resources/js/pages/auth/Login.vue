@@ -63,7 +63,7 @@
                             </svg>
                             <div>
                                 <p class="text-xs font-medium" style="color: #374151;">Akun baru?</p>
-                                <p class="text-xs" style="color: #6B7280;">Hubungi admin untuk pendaftaran akun.</p>
+                                <p class="text-xs" style="color: #6B7280;">Daftar mandiri atau hubungi admin.</p>
                             </div>
                         </li>
                         <li class="flex items-start gap-2.5">
@@ -201,6 +201,18 @@
                     </button>
 
                 </form>
+
+                <!-- Link ke Register -->
+                <p class="text-center text-sm mt-5" style="color: #6B7280;">
+                    Belum punya akun?
+                    <RouterLink
+                        :to="{ name: 'register' }"
+                        class="font-semibold transition-colors hover:underline"
+                        style="color: #006CB8;"
+                    >
+                        Daftar di sini
+                    </RouterLink>
+                </p>
             </div>
 
             <!-- Footer -->

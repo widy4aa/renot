@@ -7,7 +7,6 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class ManajemenAdminController extends Controller
@@ -38,14 +37,16 @@ class ManajemenAdminController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $newAdmin = User::create([
+        $newAdmin = new User([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => 'admin',
-            'is_active' => true,
+            'password' => $validated['password'],
             'created_by' => $admin->id,
         ]);
+        $newAdmin->role = 'admin';
+        $newAdmin->is_active = true;
+        $newAdmin->registration_status = 'approved';
+        $newAdmin->save();
 
         ActivityLog::record(
             activityType: 'admin_tambah',
@@ -108,7 +109,7 @@ class ManajemenAdminController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $adminUser->update(['password' => Hash::make($validated['password'])]);
+        $adminUser->update(['password' => $validated['password']]);
 
         return response()->json(['message' => 'Password admin berhasil direset.']);
     }

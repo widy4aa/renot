@@ -7,21 +7,28 @@ use App\Http\Controllers\Admin\DepartemenController as AdminDepartemen;
 use App\Http\Controllers\Admin\DocumentController as AdminDocument;
 use App\Http\Controllers\Admin\KategoriController as AdminKategori;
 use App\Http\Controllers\Admin\ManajemenAdminController as AdminManajemen;
+use App\Http\Controllers\Admin\ManualNotificationController as AdminManualNotification;
 use App\Http\Controllers\Admin\NotificationController as AdminNotification;
 use App\Http\Controllers\Admin\PegawaiController as AdminPegawai;
 use App\Http\Controllers\Admin\PengaturanController as AdminPengaturan;
+use App\Http\Controllers\Admin\RegistrationController as AdminRegistration;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CertificationCategoryController;
+use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\Pegawai\DashboardController as PegawaiDashboard;
 use App\Http\Controllers\Pegawai\DocumentController as PegawaiDocument;
 use App\Http\Controllers\Pegawai\NotificationController as PegawaiNotification;
 use App\Http\Controllers\Pegawai\ProfileController as PegawaiProfile;
 use Illuminate\Support\Facades\Route;
 
-// Guest routes
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+// Guest routes (rate limited: 5 request per menit per IP)
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+});
+Route::get('/departments', [DepartmentController::class, 'index']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -37,9 +44,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/approval', [AdminApproval::class, 'index']);
 
+        Route::get('/registrations', [AdminRegistration::class, 'index']);
+        Route::post('/registrations/{user}/approve', [AdminRegistration::class, 'approve']);
+        Route::post('/registrations/{user}/reject', [AdminRegistration::class, 'reject']);
+
         Route::get('/notifications', [AdminNotification::class, 'index']);
         Route::post('/notifications/read-all', [AdminNotification::class, 'markAllAsRead']);
         Route::post('/notifications/{notification}/read', [AdminNotification::class, 'markAsRead']);
+
+        Route::post('/send-notification', [AdminManualNotification::class, 'send']);
 
         Route::get('/documents', [AdminDocument::class, 'index']);
         Route::post('/documents', [AdminDocument::class, 'store']);

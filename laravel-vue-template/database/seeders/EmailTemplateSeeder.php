@@ -53,6 +53,18 @@ class EmailTemplateSeeder extends Seeder
                 'body' => "Kepada Administrator ReNot,\n\nTerdapat dokumen sertifikasi baru yang diunggah oleh pegawai dan memerlukan verifikasi.\n\nDetail Sertifikasi:\n- Pegawai           : {{nama}}\n- Departemen        : {{departemen}}\n- Jenis Sertifikasi : {{sertifikasi}}\n- Nomor Sertifikat  : {{nomor_sertifikat}}\n- Tanggal Kadaluarsa: {{tanggal_kadaluarsa}}\n\nSilakan login ke sistem ReNot untuk meninjau dan memverifikasi dokumen tersebut.\n\nHormat kami,\nSistem ReNot – Pertamina",
                 'placeholders' => '{{nama}}, {{departemen}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}',
             ],
+            [
+                'type' => 'registrasi_approved',
+                'subject' => '[ReNot] Akun Anda Telah Disetujui',
+                'body' => "Yth. {{nama}},\n\nSelamat! Pendaftaran akun ReNot Anda telah disetujui oleh administrator.\n\nAnda sekarang dapat login ke sistem ReNot menggunakan email dan kata sandi yang Anda daftarkan.\n\nDetail Akun:\n- Nama       : {{nama}}\n- Email      : {{email}}\n- NIP        : {{nip}}\n- Departemen : {{departemen}}\n\nSilakan login dan mulai mengunggah dokumen sertifikasi Anda.\n\nHormat kami,\nTim ReNot – Pertamina",
+                'placeholders' => '{{nama}}, {{email}}, {{nip}}, {{departemen}}',
+            ],
+            [
+                'type' => 'registrasi_rejected',
+                'subject' => '[ReNot] Pendaftaran Akun Ditolak',
+                'body' => "Yth. {{nama}},\n\nKami menginformasikan bahwa pendaftaran akun ReNot Anda tidak dapat disetujui oleh administrator.\n\nAlasan Penolakan:\n{{alasan_penolakan}}\n\nJika Anda merasa ini adalah kekeliruan, silakan mendaftar ulang atau hubungi administrator.\n\nHormat kami,\nTim ReNot – Pertamina",
+                'placeholders' => '{{nama}}, {{email}}, {{nip}}, {{departemen}}, {{alasan_penolakan}}',
+            ],
         ];
 
         foreach ($templates as $template) {

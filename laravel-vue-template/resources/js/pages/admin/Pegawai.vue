@@ -142,12 +142,18 @@
                             </button>
                         </div>
                         <!-- Baris 2: Reset Password + Hapus -->
-                        <div class="grid grid-cols-2 gap-1">
+                        <div class="grid grid-cols-3 gap-1">
                             <button @click="openResetPwd(p)"
                                 class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
                                 style="background:#EFF6FF; color:#006CB8;">
                                 <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                                 Reset
+                            </button>
+                            <button @click="openSendEmail(p)"
+                                class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
+                                style="background:#F3E8FF; color:#7C3AED;">
+                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                Email
                             </button>
                             <button @click="openDelete(p)"
                                 class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold"
@@ -206,6 +212,53 @@
             </div>
         </Transition>
 
+        <!-- ── Modal Kirim Email ──────────────────────────── -->
+        <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
+            <div v-if="emailTarget" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.40); backdrop-filter:blur(2px);" @click.self="emailTarget = null">
+                <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background:#F3E8FF;">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#7C3AED;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h4 class="text-base font-bold text-center" style="color:#111827;">Kirim Email</h4>
+                    <p class="text-sm text-center mt-1 mb-4" style="color:#6B7280;">
+                        Ke <span class="font-bold" style="color:#111827;">{{ emailTarget?.name }}</span>
+                        ({{ emailTarget?.email }})
+                    </p>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wide mb-1.5" style="color:#9CA3AF;">Subjek <span style="color:#ED1B2F;">*</span></label>
+                            <input v-model="emailForm.subject" type="text" placeholder="Subjek email"
+                                class="w-full px-4 py-2.5 rounded-xl text-sm font-medium outline-none"
+                                style="background:#F9FAFB; border:1.5px solid #E2E8F0; color:#111827;"
+                                @focus="e => e.target.style.borderColor='#ED1B2F'" @blur="e => e.target.style.borderColor='#E2E8F0'"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wide mb-1.5" style="color:#9CA3AF;">Isi Pesan <span style="color:#ED1B2F;">*</span></label>
+                            <textarea v-model="emailForm.body" rows="5" placeholder="Tulis pesan email..."
+                                class="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none resize-none"
+                                style="background:#F9FAFB; border:1.5px solid #E2E8F0; color:#111827;"
+                                @focus="e => e.target.style.borderColor='#ED1B2F'" @blur="e => e.target.style.borderColor='#E2E8F0'">
+                            </textarea>
+                        </div>
+                    </div>
+
+                    <p v-if="emailError" class="text-xs mt-2" style="color:#ED1B2F;">{{ emailError }}</p>
+                    <p v-if="emailSuccess" class="text-xs mt-2" style="color:#5a6e0f;">{{ emailSuccess }}</p>
+
+                    <div class="flex gap-3 mt-5">
+                        <button @click="closeEmailModal" class="flex-1 py-2.5 rounded-xl text-sm font-semibold card-elevated" style="color:#374151;">Batal</button>
+                        <button @click="sendEmail" :disabled="isProcessing" class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+                            style="background:#ED1B2F;" onmouseover="this.style.background='#c8102e'" onmouseout="this.style.background='#ED1B2F'">
+                            {{ isProcessing ? 'Mengirim...' : 'Kirim Email' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
     </div>
 </template>
 
@@ -224,6 +277,10 @@ const resetTarget  = ref(null);
 const deleteTarget = ref(null);
 const newPassword  = ref('');
 const resetError   = ref('');
+const emailTarget  = ref(null);
+const emailForm    = ref({ subject: '', body: '' });
+const emailError   = ref('');
+const emailSuccess = ref('');
 
 const departemenOptions = computed(() =>
     [...new Set(pegawaiList.value.map(p => p.department?.name).filter(Boolean))].sort()
@@ -271,6 +328,18 @@ async function toggleActive(p) {
 
 function openResetPwd(p) { resetTarget.value = p; newPassword.value = ''; resetError.value = ''; }
 function openDelete(p) { deleteTarget.value = p; }
+function openSendEmail(p) {
+    emailTarget.value = p;
+    emailForm.value = { subject: '', body: '' };
+    emailError.value = '';
+    emailSuccess.value = '';
+}
+function closeEmailModal() {
+    emailTarget.value = null;
+    emailForm.value = { subject: '', body: '' };
+    emailError.value = '';
+    emailSuccess.value = '';
+}
 
 async function submitResetPwd() {
     resetError.value = '';
@@ -297,6 +366,33 @@ async function deletePegawai() {
         pegawaiList.value = pegawaiList.value.filter(p => p.id !== deleteTarget.value.id);
         deleteTarget.value = null;
     } catch { /**/ } finally {
+        isProcessing.value = false;
+    }
+}
+
+async function sendEmail() {
+    emailError.value = '';
+    emailSuccess.value = '';
+    if (!emailForm.value.subject.trim()) {
+        emailError.value = 'Subjek email wajib diisi.';
+        return;
+    }
+    if (!emailForm.value.body.trim()) {
+        emailError.value = 'Isi pesan wajib diisi.';
+        return;
+    }
+    isProcessing.value = true;
+    try {
+        const { data } = await axios.post('/api/admin/send-notification', {
+            user_id: emailTarget.value.id,
+            subject: emailForm.value.subject,
+            body: emailForm.value.body,
+        });
+        emailSuccess.value = data.message;
+        setTimeout(() => { closeEmailModal(); }, 1500);
+    } catch (e) {
+        emailError.value = e.response?.data?.message ?? 'Gagal mengirim email.';
+    } finally {
         isProcessing.value = false;
     }
 }

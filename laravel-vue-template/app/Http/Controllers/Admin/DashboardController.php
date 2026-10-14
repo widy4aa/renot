@@ -19,7 +19,10 @@ class DashboardController extends Controller
         // ── Stats global ─────────────────────────────────────
         $totalPegawai = User::where('role', 'pegawai')
             ->where('is_active', true)
+            ->where('registration_status', User::REGISTRATION_APPROVED)
             ->count();
+
+        $pendingRegistrations = User::where('registration_status', User::REGISTRATION_PENDING)->count();
 
         $docStats = Document::selectRaw("
             COUNT(*) as total,
@@ -97,6 +100,21 @@ class DashboardController extends Controller
                 'created_at' => $log->created_at?->toISOString(),
             ]);
 
+        // ── 5 pendaftaran terbaru (pending) ────────────────────
+        $pendingRegistrationsList = User::where('registration_status', User::REGISTRATION_PENDING)
+            ->with('department:id,name')
+            ->orderByDesc('registered_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'employee_number' => $u->employee_number,
+                'department' => $u->department?->name,
+                'registered_at' => $u->registered_at?->toISOString(),
+            ]);
+
         return response()->json([
             'stats' => [
                 'total_pegawai' => $totalPegawai,
@@ -105,6 +123,7 @@ class DashboardController extends Controller
                 'expired' => (int) $docStats->expired,
                 'segera_expired' => (int) $docStats->segera_expired,
                 'aktif' => (int) $docStats->aktif,
+                'pending_registrations' => $pendingRegistrations,
             ],
             'pending_documents' => $pendingDocuments->map(fn ($d) => [
                 'id' => $d->id,
@@ -123,6 +142,7 @@ class DashboardController extends Controller
             ]),
             'department_stats' => $deptStats,
             'recent_activities' => $recentActivities,
+            'pending_registrations' => $pendingRegistrationsList,
         ]);
     }
 }

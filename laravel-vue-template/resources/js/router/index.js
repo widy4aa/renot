@@ -23,6 +23,12 @@ const router = createRouter({
             component: () => import('@/pages/auth/ResetPassword.vue'),
             meta: { guestOnly: true },
         },
+        {
+            path: '/register',
+            name: 'register',
+            component: () => import('@/pages/auth/Register.vue'),
+            meta: { guestOnly: true },
+        },
 
         // ─── Redirect /dashboard → berdasarkan role ─────────────
         {
@@ -81,6 +87,11 @@ const router = createRouter({
                     path: 'approval',
                     name: 'admin.approval',
                     component: () => import('@/pages/admin/Approval.vue'),
+                },
+                {
+                    path: 'pendaftaran',
+                    name: 'admin.pendaftaran',
+                    component: () => import('@/pages/admin/Pendaftaran.vue'),
                 },
                 {
                     path: 'pegawai',

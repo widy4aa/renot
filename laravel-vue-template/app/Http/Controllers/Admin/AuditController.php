@@ -15,7 +15,7 @@ class AuditController extends Controller
             ->orderByDesc('created_at');
 
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = str_replace(['%', '_'], ['\\%', '\\_'], $request->search);
             $query->where(fn ($q) => $q
                 ->where('description', 'ilike', "%{$s}%")
                 ->orWhereHas('user', fn ($q2) => $q2->where('name', 'ilike', "%{$s}%"))

@@ -1,9 +1,9 @@
 # DOKUMENTASI TEKNIS — ReNot
 ## Reminder & Notification Sertifikasi Pegawai
 
-**Versi dokumen:** 2.1
-**Terakhir diperbarui:** 23 September 2026
-**Status project:** Sprint 5 — Mail Config SMTP, Docker fix PHP 8.4, env separation
+**Versi dokumen:** 3.1
+**Terakhir diperbarui:** 8 Oktober 2026
+**Status project:** Sprint 6 — Security Hardening, Rate Limiting, Pentest Fixes
 
 ---
 
@@ -30,8 +30,8 @@
 ReNot adalah aplikasi internal perusahaan (konteks Pertamina) untuk memantau masa berlaku dokumen/sertifikasi pegawai (HSSE & Aviasi) dan mengirim reminder otomatis sebelum dokumen kadaluarsa.
 
 **Dua role:**
-- **Admin** — mengelola semua pegawai, dokumen, approval, konfigurasi sistem
-- **Pegawai** — mengelola dokumen milik sendiri, menerima reminder
+- **Admin** — mengelola semua pegawai, dokumen, approval, approval pendaftaran, kirim email manual, konfigurasi sistem
+- **Pegawai** — mendaftar mandiri, mengelola dokumen milik sendiri, menerima reminder
 
 **Dokumen referensi:**
 - `SRS-ReNot.md` — Software Requirements Specification lengkap
@@ -126,8 +126,8 @@ laravel-vue-template/
 ├── .env.docker.example         ← Template kosong — di-commit sebagai referensi tim
 ├── .dockerignore
 └── docker/
-    ├── nginx/default.conf      ← Nginx port 8000, SPA catch-all, storage alias
-    ├── php/php.ini             ← upload 10M, memory 256M, opcache
+    ├── nginx/default.conf      ← Nginx port 8000, SPA catch-all, storage alias, upload max 5M
+    ├── php/php.ini             ← upload 5M, post 8M, memory 256M, opcache
     ├── supervisord.conf        ← Manage php-fpm + nginx dalam 1 container
     └── start.sh                ← Entrypoint: wait DB → migrate → cache → start
 ```
@@ -213,33 +213,46 @@ laravel-vue-template/
 │   │   │   ├── Admin/
 │   │   │   │   ├── ApprovalController.php      ← List dokumen pending approval
 │   │   │   │   ├── AuditController.php          ← Log aktivitas (server-side pagination)
-│   │   │   │   ├── DashboardController.php      ← Stats global + pending + expiring
+│   │   │   │   ├── DashboardController.php      ← Stats global + pending + expiring + pendaftaran
 │   │   │   │   ├── DepartemenController.php     ← CRUD departemen
 │   │   │   │   ├── DocumentController.php       ← CRUD dokumen semua pegawai + approve/reject
 │   │   │   │   ├── KategoriController.php       ← CRUD jenis sertifikasi per kategori
 │   │   │   │   ├── ManajemenAdminController.php ← CRUD akun admin
+│   │   │   │   ├── ManualNotificationController.php ← Kirim email manual ke pegawai
 │   │   │   │   ├── NotificationController.php   ← Notifikasi admin
 │   │   │   │   ├── PegawaiController.php        ← CRUD pegawai + toggle aktif + reset password
-│   │   │   │   └── PengaturanController.php     ← Jadwal reminder + template email
+│   │   │   │   ├── PengaturanController.php     ← Jadwal reminder + template email + SMTP
+│   │   │   │   └── RegistrationController.php   ← Approve/reject pendaftaran pegawai
 │   │   │   ├── Auth/
-│   │   │   │   └── AuthController.php
+│   │   │   │   └── AuthController.php           ← Login, register, forgot/reset password
 │   │   │   ├── Pegawai/
 │   │   │   │   ├── DashboardController.php
 │   │   │   │   ├── DocumentController.php
 │   │   │   │   ├── NotificationController.php
 │   │   │   │   └── ProfileController.php
-│   │   │   └── CertificationCategoryController.php
+│   │   │   ├── CertificationCategoryController.php
+│   │   │   └── DepartmentController.php         ← List departemen publik (untuk form register)
 │   │   └── Middleware/
 │   │       └── EnsureRole.php
-│   └── Models/ (12 model)
+│   ├── Mail/
+│   │   ├── ReminderMail.php             ← Email reminder/approve/reject dokumen
+│   │   ├── RegistrationMail.php         ← Email approve/reject pendaftaran
+│   │   └── ManualNotificationMail.php   ← Email manual dari admin
+│   └── Models/ (13 model)
 ├── database/
-│   ├── migrations/                    ← 16 migration file
-│   └── seeders/
-│       ├── DocumentSeeder.php         ← Dokumen + dummy file dari /sertif/
-│       └── ... (6 seeder lainnya)
+│   ├── migrations/                    ← 17 migration file
+│   └── seeders/                       ← 8 seeder (berurut: master → config → user → transaksional)
+│       ├── DatabaseSeeder.php         ← Orchestrator — urutan seed yang benar
+│       ├── DepartmentSeeder.php       ← 1. Master: departemen
+│       ├── CertificationCategorySeeder.php ← 2. Master: kategori + jenis sertifikasi
+│       ├── ReminderScheduleSeeder.php ← 3. Config: jadwal reminder H-60 s/d H-1
+│       ├── EmailTemplateSeeder.php    ← 4. Config: 7 template email
+│       ├── UserSeeder.php             ← 5. User: admin + 3 pegawai (dengan avatar)
+│       ├── DocumentSeeder.php         ← 6. Dokumen: 14 dokumen + dummy file dari /sertif/
+│       └── NotificationSeeder.php     ← 7. Notifikasi: 13 notifikasi dummy
 ├── docker/                            ← Konfigurasi Docker/Podman
 ├── routes/
-│   ├── api.php                        ← Semua API endpoint
+│   ├── api.php                        ← Semua API endpoint (~100 route)
 │   ├── console.php                    ← Scheduled command (reminders:send daily)
 │   └── web.php                        ← Catch-all → SPA
 └── resources/
@@ -247,7 +260,7 @@ laravel-vue-template/
     └── js/
         ├── app.js
         ├── router/index.js
-        ├── stores/auth.js
+        ├── stores/auth.js             ← Pinia store: login, register, logout, fetchUser
         ├── composables/
         │   ├── useDocumentHelpers.js  ← statusConfig, formatDate, formatFileSize, daysUntilExpiry
         │   └── useFaq.js             ← FAQ dinamis per halaman (inject/provide)
@@ -256,10 +269,11 @@ laravel-vue-template/
         │   └── AppTopbar.vue         ← Jam live, bell notifikasi, dropdown
         ├── layouts/
         │   ├── PegawaiLayout.vue     ← provide setPageFaqs, fetch unread count
-        │   └── AdminLayout.vue       ← provide setPageFaqs, fetch unread count admin
+        │   └── AdminLayout.vue       ← provide setPageFaqs, fetch unread + pending registrations
         └── pages/
             ├── auth/
-            │   ├── Login.vue
+            │   ├── Login.vue          ← Login + link ke Register
+            │   ├── Register.vue       ← Pendaftaran mandiri pegawai
             │   ├── ForgotPassword.vue
             │   └── ResetPassword.vue
             ├── pegawai/
@@ -270,20 +284,21 @@ laravel-vue-template/
             │   ├── Notifikasi.vue
             │   └── Profile.vue
             └── admin/
-                ├── Dashboard.vue           ← Stats global + pending + expiring soon
+                ├── Dashboard.vue           ← Stats + pending docs + expiring + pendaftaran baru
                 ├── Approval.vue            ← List pending, modal approve/tolak
+                ├── Pendaftaran.vue         ← List pendaftaran baru, approve/tolak
                 ├── Dokumen.vue             ← Semua dokumen + filter departemen
                 ├── DokumenDetail.vue       ← Detail + tombol approve/tolak/edit
                 ├── DokumenForm.vue         ← Tambah/edit + pilih pegawai
                 ├── Notifikasi.vue
                 ├── Profile.vue
-                ├── Pegawai.vue             ← List pegawai + toggle aktif + reset pwd
+                ├── Pegawai.vue             ← List pegawai + toggle aktif + reset pwd + kirim email
                 ├── PegawaiForm.vue         ← Form tambah/edit pegawai
                 ├── Departemen.vue          ← CRUD departemen via modal
                 ├── Kategori.vue            ← CRUD jenis sertifikasi per kategori
                 ├── Audit.vue               ← Log aktivitas + pagination server-side
                 ├── ManajemenAdmin.vue      ← CRUD akun admin
-                ├── Pengaturan.vue          ← Jadwal reminder + template email
+                ├── Pengaturan.vue          ← Jadwal reminder + template email + SMTP
                 └── AdminPlaceholder.vue   ← Komponen "Segera Hadir" reusable
 ```
 
@@ -297,7 +312,7 @@ laravel-vue-template/
 
 | Tabel | Keterangan |
 |---|---|
-| `users` | Admin & pegawai dalam satu tabel. Kolom `role`: `admin`/`pegawai`. |
+| `users` | Admin & pegawai dalam satu tabel. Kolom `role`: `admin`/`pegawai`. Kolom `registration_status`: `approved`/`pending`/`rejected`. |
 | `departments` | Master data departemen/divisi |
 | `certification_categories` | HSSE & Aviasi. `is_deletable=false` |
 | `certification_types` | Jenis sertifikat per kategori (GSI, SI, AT, RDS, PACE, dll) |
@@ -309,6 +324,21 @@ laravel-vue-template/
 | `email_templates` | Template email per tipe notifikasi dengan placeholder |
 | `system_settings` | Key-value store pengaturan sistem |
 | `activity_logs` | Audit trail semua aktivitas dengan old_values/new_values JSONB |
+| `mail_configs` | Profile SMTP yang dikelola admin. Password terenkripsi. Satu aktif pada satu waktu. |
+
+### Kolom Registrasi di Tabel `users`
+
+```
+registration_status          VARCHAR(20) default 'approved'
+registration_rejected_reason TEXT nullable
+registered_at                TIMESTAMP nullable
+```
+
+- User yang dibuat admin → `registration_status = 'approved'` (default)
+- User yang self-register → `registration_status = 'pending'`, `is_active = false`
+- Admin approve → `registration_status = 'approved'`, `is_active = true`
+- Admin reject → `registration_status = 'rejected'`, alasan disimpan
+- Pegawai yang ditolak bisa mendaftar ulang (akun rejected dihapus otomatis)
 
 ### Logika Status Dokumen
 
@@ -344,9 +374,34 @@ php artisan reminders:send (dijalankan daily via schedule)
 ### Auth Flow
 
 ```
-POST /api/login → token + user (avatar via Storage::url)
-GET  /api/me    → user + unread_notifications_count
-POST /api/logout → hapus token
+POST /api/register → pendaftaran baru (status pending, tidak bisa login)
+POST /api/login    → cek registration_status + is_active → token + user
+GET  /api/me       → user + unread_notifications_count
+POST /api/logout   → hapus token
+```
+
+#### Flow Registrasi Mandiri
+
+```
+Pegawai buka /register
+  → Isi form: nama, email, NIP, HP, departemen, password
+  → Submit → akun dibuat (is_active=false, registration_status=pending)
+  → Semua admin terima notifikasi in-app "Pendaftaran Baru"
+  → Admin buka halaman Pendaftaran → approve/reject
+    → Approve: is_active=true, registration_status=approved, email dikirim
+    → Reject: registration_rejected_reason diisi, email dikirim
+  → Pegawai bisa login setelah approved
+  → Jika rejected, pegawai bisa daftar ulang (akun lama dihapus otomatis)
+```
+
+#### Login — Pengecekan Registration Status
+
+```
+1. Cek email + password
+2. Jika registration_status = 'pending' → 422 "Menunggu persetujuan admin"
+3. Jika registration_status = 'rejected' → 422 "Pendaftaran ditolak"
+4. Jika is_active = false → 422 "Akun dinonaktifkan"
+5. Sukses → return token + user
 ```
 
 ### Middleware
@@ -361,10 +416,12 @@ Untuk API, unauthenticated request return **401 JSON** (bukan redirect ke login)
 
 | Controller | Fungsi Utama |
 |---|---|
-| `DashboardController` | Stats global: total pegawai, dokumen, pending, expired. List 5 pending + 5 expiring soon. |
+| `DashboardController` | Stats global: total pegawai, dokumen, pending, expired, **pendaftaran baru**. List 5 pending + 5 expiring soon + **5 pendaftaran terbaru**. |
 | `ApprovalController` | List dokumen `pending_approval` dengan filter kategori + departemen |
-| `DocumentController` | CRUD semua dokumen + approve + reject + download + export Excel (ikut filter) |
+| `RegistrationController` | **List/approve/reject pendaftaran pegawai baru** |
+| `DocumentController` | CRUD semua dokumen + approve + reject + download + export Excel (ikut filter). **Max upload 2 MB.** |
 | `PegawaiController` | CRUD pegawai + toggleActive + resetPassword |
+| `ManualNotificationController` | **Kirim email manual ke pegawai tertentu (subject + body custom)** |
 | `DepartemenController` | CRUD departemen. Hapus dicegah jika ada pegawai aktif. |
 | `KategoriController` | CRUD jenis sertifikasi per kategori. Hapus dicegah jika dipakai dokumen. |
 | `AuditController` | List activity_logs dengan server-side pagination + filter |
@@ -444,11 +501,11 @@ Sama persis dengan pegawai. `AdminLayout.vue` provide `setPageFaqs`, fetch unrea
 ```
 Header card: avatar biru + nama + badge "Admin HR" + tanggal
 
-6 Stat card (grid-cols-6):
-  Total Pegawai (klik → admin.pegawai) | Total Dokumen | Pending | Expired | Segera Expired | Aktif
+7 Stat card:
+  Total Pegawai (klik → admin.pegawai) | Total Dokumen | Pending | Expired | Segera Expired | Aktif | Pendaftaran Baru
 
-2 panel bawah (grid-cols-2):
-  Menunggu Approval (5 terbaru) | Segera Kadaluarsa (5 terbaru)
+4 panel bawah (grid-cols-4):
+  Pendaftaran Menunggu (5 terbaru) | Menunggu Approval (5 terbaru) | Segera Kadaluarsa (5 terbaru) | Aktivitas Terkini (5 terbaru)
 ```
 
 ### Halaman Dokumen Admin
@@ -475,6 +532,7 @@ Header card: avatar biru + nama + badge "Admin HR" + tanggal
 - Badge jumlah dokumen, expired, dan pending per baris pegawai
 - Toggle aktif/nonaktif langsung dari list
 - Reset password via modal
+- **Kirim email manual** via modal (subject + body, dikirim ke pegawai yang dipilih)
 - Form tambah/edit: nama, email, NIP, HP, departemen, password (hanya saat tambah), toggle status
 
 ### Composables
@@ -575,14 +633,37 @@ label         : text-xs font-bold uppercase tracking-wide color #9CA3AF
 
 Semua password: `password`
 
-| Role | Nama | Email | No. Pegawai | Departemen |
-|---|---|---|---|---|
-| Admin | Administrator | admin@renot.app | — | — |
-| Pegawai | Budi Santoso | budi@renot.app | EMP-001 | HSSE |
-| Pegawai | Siti Rahayu | siti@renot.app | EMP-002 | Aviasi |
-| Pegawai | Ahmad Fauzi | ahmad@renot.app | EMP-003 | Operasional |
+| Role | Nama | Email | No. Pegawai | Departemen | Avatar |
+|---|---|---|---|---|---|
+| Admin | Administrator | admin@renot.app | — | — | — |
+| Pegawai | Budi Santoso | budi@renot.app | EMP-001 | HSSE | Ada (dari sertif/) |
+| Pegawai | Siti Rahayu | siti@renot.app | EMP-002 | Aviasi | Ada (dari sertif/) |
+| Pegawai | Ahmad Fauzi | ahmad@renot.app | EMP-003 | Operasional | Ada (dari sertif/) |
+
+### Urutan Seeder (`DatabaseSeeder.php`)
+
+```
+1. Master Data (independen)
+   ├── DepartmentSeeder            → HSSE, Aviasi, Operasional, Teknik, Administrasi
+   └── CertificationCategorySeeder → HSSE (6 tipe) + Aviasi (3 tipe)
+
+2. Konfigurasi Sistem (independen)
+   ├── ReminderScheduleSeeder      → 12 jadwal (H-60 s/d H-1)
+   └── EmailTemplateSeeder         → 7 template email (5 dokumen + 2 registrasi)
+
+3. User (butuh departemen)
+   └── UserSeeder                  → 1 admin + 3 pegawai (dengan avatar dari sertif/)
+
+4. Data Transaksional (butuh user + cert types)
+   ├── DocumentSeeder              → 14 dokumen (file di-copy dari sertif/ ke storage)
+   └── NotificationSeeder          → 13 notifikasi dummy
+```
 
 **Semua dokumen** sudah punya file dummy (gambar sertifikat) dari folder `/sertif/` — tombol Download dan Preview aktif.
+
+**Avatar pegawai** diambil dari folder `/sertif/` dan di-copy ke `storage/app/public/avatars/` saat seeding.
+
+**Seeder aman dijalankan ulang** — menggunakan `insertOrIgnore` dan `updateOrCreate` di mana perlu.
 
 ---
 
@@ -590,11 +671,15 @@ Semua password: `password`
 
 ### Public (tanpa auth)
 
+_Semua endpoint public ini dibatasi oleh rate limiting: 5 request per 1 menit per IP._
+
 | Method | Endpoint | Fungsi |
 |---|---|---|
 | POST | `/api/login` | Login, return token + user |
+| POST | `/api/register` | Pendaftaran mandiri pegawai (status pending) |
 | POST | `/api/forgot-password` | Kirim link reset password |
 | POST | `/api/reset-password` | Proses reset password |
+| GET | `/api/departments` | Daftar departemen (untuk dropdown form registrasi) |
 
 ### Protected (auth:sanctum)
 
@@ -610,15 +695,32 @@ Semua password: `password`
 
 | Method | Endpoint | Fungsi |
 |---|---|---|
-| GET | `/api/admin/dashboard` | Stats global + 5 pending + 5 expiring soon |
+| GET | `/api/admin/dashboard` | Stats global + 5 pending + 5 expiring soon + **5 pendaftaran baru** |
 | GET | `/api/admin/approval` | List dokumen pending_approval (filter kategori, departemen) |
+
+#### Pendaftaran Akun
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/registrations` | List pendaftaran pending (filter: search) |
+| POST | `/api/admin/registrations/{id}/approve` | Setujui pendaftaran → aktifkan akun + kirim email |
+| POST | `/api/admin/registrations/{id}/reject` | Tolak pendaftaran + alasan wajib + kirim email |
+
+#### Notifikasi Admin & Email Manual
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/notifications` | List notifikasi + unread_count |
+| POST | `/api/admin/notifications/read-all` | Tandai semua dibaca |
+| POST | `/api/admin/notifications/{id}/read` | Tandai satu dibaca |
+| POST | `/api/admin/send-notification` | Kirim email manual ke pegawai (user_id + subject + body) |
 
 #### Dokumen
 
 | Method | Endpoint | Fungsi |
 |---|---|---|
 | GET | `/api/admin/documents` | Semua dokumen (filter: status, kategori, jenis, departemen, search, exp range) |
-| POST | `/api/admin/documents` | Tambah dokumen untuk pegawai (langsung aktif) |
+| POST | `/api/admin/documents` | Tambah dokumen untuk pegawai (langsung aktif). **Max file 2 MB.** |
 | GET | `/api/admin/documents/export` | Export Excel (ikut filter) |
 | GET | `/api/admin/documents/{id}` | Detail dokumen |
 | POST | `/api/admin/documents/{id}` | Edit dokumen |
@@ -656,14 +758,6 @@ Semua password: `password`
 | POST | `/api/admin/kategori/{cat}/types` | Tambah jenis sertifikasi |
 | PUT | `/api/admin/kategori/{cat}/types/{type}` | Edit jenis sertifikasi |
 | DELETE | `/api/admin/kategori/{cat}/types/{type}` | Hapus (gagal jika dipakai dokumen) |
-
-#### Notifikasi Admin
-
-| Method | Endpoint | Fungsi |
-|---|---|---|
-| GET | `/api/admin/notifications` | List notifikasi + unread_count |
-| POST | `/api/admin/notifications/read-all` | Tandai semua dibaca |
-| POST | `/api/admin/notifications/{id}/read` | Tandai satu dibaca |
 
 #### Audit Trail
 
@@ -728,15 +822,17 @@ Semua password: `password`
 | Fitur | Keterangan |
 |---|---|
 | Setup project | Laravel 13 + PostgreSQL + Vue 3 + Tailwind v4 |
-| Database | 16 migration, 12 model, semua relasi |
-| Seeders | User, departemen, kategori, reminder, dokumen + dummy file, notifikasi |
-| Auth | Login, logout, forgot/reset password, redirect by role |
+| Database | 17 migration, 13 model, semua relasi |
+| Seeders | 8 seeder berurut: master → config → user (dengan avatar) → data transaksional |
+| Auth | Login, **self-register**, logout, forgot/reset password, redirect by role |
 | Middleware | EnsureRole, API 401 JSON (bukan redirect login) |
 | Docker/Podman | Multi-stage Dockerfile, docker-compose.yml, nginx, supervisord, start.sh |
+| Upload Limit | **Max 2 MB** (Laravel validation). PHP 5 MB, Nginx 5 MB. |
 
 #### Role Pegawai
 | Fitur | Keterangan |
 |---|---|
+| **Registrasi Mandiri** | Form registrasi publik → akun pending → admin approve → bisa login |
 | UI — Modern Bold | Topbar + sidebar merah `#ED1B2F`, `.card-elevated`, Lime `#ACC42A` |
 | Sidebar FAQ | FAQ dinamis per halaman, FAQ panel = modal popup dengan backdrop blur |
 | Dashboard | 6 stat card, donut chart SVG, search, 4-panel bawah |
@@ -749,12 +845,13 @@ Semua password: `password`
 #### Role Admin
 | Fitur | Keterangan |
 |---|---|
-| Dashboard | Stats global + list pending approval + list expiring soon |
+| Dashboard | Stats global + list pending approval + list expiring soon + **list pendaftaran baru** |
+| **Pendaftaran** | List pendaftaran pending, approve/reject dengan alasan, email otomatis |
 | Dokumen | CRUD semua dokumen, filter + departemen, export Excel ikut filter |
 | Detail Dokumen | Tombol approve/tolak di header, info pegawai |
 | Form Dokumen | Dropdown pilih pegawai, auto-aktif saat admin input |
 | Approval | List pending, filter kategori + departemen, modal approve + tolak |
-| Pegawai | CRUD, toggle aktif, reset password, badge dokumen per baris |
+| Pegawai | CRUD, toggle aktif, reset password, badge dokumen per baris, **kirim email manual** |
 | Form Pegawai | Nama, email, NIP, HP, departemen, password, toggle status |
 | Departemen | CRUD via modal, tampilkan jumlah pegawai, hapus diblokir jika ada pegawai aktif |
 | Kategori Sertifikasi | 2 panel HSSE & Aviasi, edit inline, hapus diblokir jika dipakai dokumen |
@@ -772,12 +869,53 @@ Semua password: `password`
 | Auto-update Expired | Update status aktif/segera_expired → expired saat command berjalan |
 | Mail Config SMTP | Admin kelola profile SMTP via UI. Email approve/reject otomatis dikirim ke pegawai. |
 | Email Reminder | Saat approve/reject dokumen, email dikirim ke pegawai menggunakan active mail config |
+| **Email Registrasi** | Email otomatis saat pendaftaran di-approve atau di-reject |
+| **Email Manual** | Admin bisa kirim email custom ke pegawai dari halaman Pegawai |
+
+#### Keamanan & Security Hardening
+| Fitur | Keterangan |
+|---|---|
+| Rate Limiting | `throttle:5,1` (5 req/menit) pada endpoint auth (`/login`, `/register`, `/forgot-password`, `/reset-password`) mencegah brute-force |
+| Password Security | Menggunakan cast `hashed`. Double-hash bug sudah di-fix di semua form |
+| Mass Assignment Protection | `role`, `is_active`, dan `registration_status` dilindungi dari injeksi parameter |
+| Database Security | Port PostgreSQL `5433` dihapus dari host expose, hanya bisa diakses dalam container network. |
+| Data Privacy | Path internal `file_path` dihapus dari JSON API response, diganti `file_url`. Password SMTP `mail_password` di-hidden. |
+| Server Hardening | Header `X-Powered-By` dinonaktifkan (`expose_php = Off`). Debug mode error dan stack trace dimatikan di production. |
+| SQL Injection Protection | Wildcard `%` dan `_` di-escape otomatis pada query pencarian ILIKE |
+
+#### Tipe Notifikasi
+
+| Tipe | Channel | Penerima | Keterangan |
+|---|---|---|---|
+| `reminder_akan_expired` | in_app + email | Pegawai | Reminder H-X sebelum kadaluarsa |
+| `dokumen_expired` | in_app + email | Pegawai + Admin | Dokumen sudah expired |
+| `dokumen_pending` | in_app + email | Admin | Dokumen baru menunggu review |
+| `dokumen_approved` | in_app + email | Pegawai | Dokumen disetujui |
+| `dokumen_ditolak` | in_app + email | Pegawai | Dokumen ditolak + alasan |
+| `registrasi_baru` | in_app | Admin | Pendaftaran baru masuk |
+| `registrasi_approved` | in_app + email | Pegawai | Pendaftaran disetujui |
+| `notifikasi_manual` | in_app + email | Pegawai | Email manual dari admin |
+
+#### Template Email (7 template)
+
+| Tipe | Placeholder |
+|---|---|
+| `reminder_akan_expired` | `{{nama}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}, {{hari_tersisa}}, {{departemen}}` |
+| `dokumen_expired` | `{{nama}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}, {{departemen}}` |
+| `dokumen_approved` | `{{nama}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}, {{departemen}}` |
+| `dokumen_ditolak` | `{{nama}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{alasan_penolakan}}, {{departemen}}` |
+| `dokumen_pending` | `{{nama}}, {{departemen}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}` |
+| `registrasi_approved` | `{{nama}}, {{email}}, {{nip}}, {{departemen}}` |
+| `registrasi_rejected` | `{{nama}}, {{email}}, {{nip}}, {{departemen}}, {{alasan_penolakan}}` |
 
 ### Belum Diimplementasi ❌
 
 | Fitur | Keterangan |
 |---|---|
 | Export Excel Admin di Dashboard | Export sudah ada di halaman Dokumen, belum di Dashboard. |
+| Bulk upload dokumen | Admin upload banyak dokumen sekaligus via template Excel |
+| WhatsApp notification | Selain email, reminder juga dikirim via WhatsApp |
+| Calendar view | Tampilan kalender untuk melihat jadwal expired dokumen |
 
 ---
 
@@ -792,14 +930,52 @@ Semua password: `password`
 - **`useFaq([...])`** — wajib dipanggil di setiap halaman baru untuk set FAQ kontekstual.
 - **`.card-elevated`** adalah class global — jangan hardcode border/shadow per komponen.
 - **`Storage::url()`** wajib untuk semua URL file/avatar dari backend.
+- **Upload file max 2 MB** (2048 KB). Format: `pdf, jpg, jpeg, png`.
+- **Semua user seeder** harus include `registration_status: 'approved'` agar tidak terblokir saat login.
 
 ### Docker
 
 - Image pakai prefix `docker.io/` karena `registries.conf` tidak punya unqualified-search. Jangan hapus prefix ini.
 - Named volume `storage_public` menyimpan avatar + file sertifikat. Jangan mount ulang tanpa backup.
 - **Env production** diambil dari `.env.docker` (bukan `.env`). Copy dari `.env.docker.example` lalu isi credentials.
-- **Port PostgreSQL host = `5433`** (bukan 5432). Di dalam container-to-container tetap pakai `DB_HOST=db` + port 5432.
-- Jangan hardcode credentials di `docker-compose.yml` — gunakan `env_file: .env.docker`.
+- **Port PostgreSQL host tidak terekspos**. Di dalam container-to-container tetap pakai `DB_HOST=db` + port 5432.
+- Jangan hardcode credentials di `docker-compose.yml` — gunakan `env_file: .env.docker` atau format `${VAR:-default}`.
+- **Upload limit**: Laravel 2 MB, PHP 5 MB, Nginx 5 MB. Laravel yang menolak duluan dengan pesan error yang jelas.
+
+### Batas Upload File
+
+| Layer | Batas | File |
+|---|---|---|
+| Laravel validation | **2 MB** (2048 KB) | `DocumentController` admin & pegawai |
+| PHP `upload_max_filesize` | 5 MB | `docker/php/php.ini` |
+| PHP `post_max_size` | 8 MB | `docker/php/php.ini` |
+| Nginx `client_max_body_size` | 5 MB | `docker/nginx/default.conf` |
+| Avatar (profil) | 2 MB | `ProfileController` |
+
+### Backup
+
+```bash
+# Backup database
+podman-compose exec db pg_dump -U root renot > backup_db_$(date +%Y%m%d).sql
+
+# Backup file upload (sertifikat + avatar)
+podman volume export renot_storage_public > backup_storage_$(date +%Y%m%d).tar
+
+# Restore database
+podman-compose exec -T db psql -U root renot < backup_db_20261007.sql
+
+# Restore file upload
+podman volume import renot_storage_public backup_storage_20261007.tar
+```
+
+### File .env
+
+| File | Fungsi | Di Git? |
+|---|---|---|
+| `.env` | Development lokal | Tidak (gitignored) |
+| `.env.example` | Template dev (di-copy ke `.env`) | Ya |
+| `.env.docker` | Production Docker | Tidak (gitignored) |
+| `.env.docker.example` | Template deploy Docker | Ya |
 
 ### Pola Admin Controller
 
@@ -829,4 +1005,4 @@ Semua controller admin mengikuti pola yang sama:
 
 ---
 
-*Dokumen ini diperbarui pada 23 September 2026. Versi 2.1: tambah Mail Config SMTP (6 endpoint baru), fix Docker PHP 8.3→8.4, port PostgreSQL host 5432→5433, sistem .env.docker terpisah, update status implementasi email reminder.*
+*Dokumen ini diperbarui pada 8 Oktober 2026. Versi 3.1: tambah security hardening (rate limiting 5 req/min, mass assignment fix, double-hash fix, hapus expose DB port, hapus X-Powered-By header, hide internal file_path dan mail_password).*

@@ -7,7 +7,6 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class PegawaiController extends Controller
@@ -24,7 +23,7 @@ class PegawaiController extends Controller
             ->orderBy('name');
 
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = str_replace(['%', '_'], ['\\%', '\\_'], $request->search);
             $query->where(fn ($q) => $q
                 ->where('name', 'ilike', "%{$s}%")
                 ->orWhere('email', 'ilike', "%{$s}%")
@@ -57,17 +56,19 @@ class PegawaiController extends Controller
             'is_active' => ['boolean'],
         ]);
 
-        $user = User::create([
+        $user = new User([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'employee_number' => $validated['employee_number'],
             'phone' => $validated['phone'] ?? null,
             'department_id' => $validated['department_id'],
-            'password' => Hash::make($validated['password']),
-            'role' => 'pegawai',
-            'is_active' => $validated['is_active'] ?? true,
+            'password' => $validated['password'],
             'created_by' => $admin->id,
         ]);
+        $user->role = 'pegawai';
+        $user->is_active = $validated['is_active'] ?? true;
+        $user->registration_status = 'approved';
+        $user->save();
 
         ActivityLog::record(
             activityType: 'pegawai_tambah',
@@ -177,7 +178,8 @@ class PegawaiController extends Controller
         abort_if($pegawai->role !== 'pegawai', 404);
 
         $admin = $request->user();
-        $pegawai->update(['is_active' => ! $pegawai->is_active]);
+        $pegawai->is_active = ! $pegawai->is_active;
+        $pegawai->save();
 
         $status = $pegawai->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
@@ -205,7 +207,7 @@ class PegawaiController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $pegawai->update(['password' => Hash::make($validated['password'])]);
+        $pegawai->update(['password' => $validated['password']]);
 
         ActivityLog::record(
             activityType: 'pegawai_reset_password',

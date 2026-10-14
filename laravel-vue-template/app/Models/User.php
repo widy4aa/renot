@@ -15,17 +15,23 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const REGISTRATION_PENDING = 'pending';
+
+    public const REGISTRATION_APPROVED = 'approved';
+
+    public const REGISTRATION_REJECTED = 'rejected';
+
     protected $fillable = [
         'employee_number',
         'name',
         'email',
         'password',
-        'role',
         'phone',
         'avatar',
         'department_id',
-        'is_active',
         'created_by',
+        'registration_rejected_reason',
+        'registered_at',
     ];
 
     protected $hidden = [
@@ -39,6 +45,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'registered_at' => 'datetime',
         ];
     }
 
@@ -54,6 +61,16 @@ class User extends Authenticatable
     public function isPegawai(): bool
     {
         return $this->role === 'pegawai';
+    }
+
+    public function isRegistrationPending(): bool
+    {
+        return $this->registration_status === self::REGISTRATION_PENDING;
+    }
+
+    public function isRegistrationApproved(): bool
+    {
+        return $this->registration_status === self::REGISTRATION_APPROVED;
     }
 
     // -------------------------------------------------------

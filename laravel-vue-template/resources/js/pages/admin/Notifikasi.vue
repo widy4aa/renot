@@ -132,6 +132,18 @@ const typeMap = {
         label: 'Ditolak', accentColor: '#DB2777', bgColor: '#FCE7F3',
         icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
     },
+    registrasi_baru: {
+        label: 'Pendaftaran', accentColor: '#D97706', bgColor: '#FEF3C7',
+        icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
+    },
+    registrasi_approved: {
+        label: 'Reg. Setujui', accentColor: '#ACC42A', bgColor: '#F7FEE7',
+        icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+    },
+    notifikasi_manual: {
+        label: 'Email', accentColor: '#7C3AED', bgColor: '#F3E8FF',
+        icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    },
 };
 
 function typeConfig(type) {

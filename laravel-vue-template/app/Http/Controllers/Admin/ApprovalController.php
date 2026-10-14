@@ -30,7 +30,7 @@ class ApprovalController extends Controller
             $query->whereHas('owner', fn ($q) => $q->where('department_id', $request->departemen));
         }
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = str_replace(['%', '_'], ['\\%', '\\_'], $request->search);
             $query->where(fn ($q) => $q
                 ->whereHas('owner', fn ($q2) => $q2->where('name', 'ilike', "%{$s}%"))
                 ->orWhereHas('certificationType', fn ($q2) => $q2->where('name', 'ilike', "%{$s}%"))

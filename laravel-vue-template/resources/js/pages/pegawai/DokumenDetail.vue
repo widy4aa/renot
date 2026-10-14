@@ -354,9 +354,9 @@ const isPdf = computed(() => {
 
 // URL file — image pakai storage public URL langsung (tidak butuh auth)
 const fileUrl = computed(() => {
-    if (!doc.value?.has_file || !doc.value?.file_path) return null;
+    if (!doc.value?.has_file || !doc.value?.file_url) return null;
     if (isImage.value) {
-        return `/storage/${doc.value.file_path}`;
+        return doc.value.file_url;
     }
     // PDF: pakai blob via axios dengan auth header
     return null;

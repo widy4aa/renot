@@ -68,6 +68,11 @@ export const useAuthStore = defineStore('auth', () => {
         return data;
     }
 
+    async function register(formData) {
+        const { data } = await axios.post('/api/register', formData);
+        return data;
+    }
+
     async function forgotPassword(email) {
         const { data } = await axios.post('/api/forgot-password', { email });
         return data;
@@ -88,6 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
         logout,
         fetchUser,
         updateProfile,
+        register,
         forgotPassword,
         resetPassword,
     };

@@ -297,14 +297,14 @@ const daysLeft     = computed(() => {
 
 const isImage  = computed(() => ['image/jpeg','image/jpg','image/png','image/webp'].includes(doc.value?.file_mime));
 const isPdf    = computed(() => doc.value?.file_mime === 'application/pdf');
-const fileUrl  = computed(() => doc.value?.file_path ? `/storage/${doc.value.file_path}` : null);
+const fileUrl  = computed(() => doc.value?.file_url ?? null);
 
 async function fetchDocument() {
     isLoading.value = true;
     try {
         const { data } = await axios.get(`/api/admin/documents/${route.params.id}`);
         doc.value = data;
-        if (isPdf.value && data.file_path) {
+        if (isPdf.value && data.file_url) {
             loadPdf();
         }
     } catch {

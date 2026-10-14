@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\DB;
 
 class CertificationCategorySeeder extends Seeder
 {
+    /**
+     * Seed kategori sertifikasi (HSSE & Aviasi) beserta jenis-jenisnya.
+     * Menggunakan updateOrCreate agar aman dijalankan berulang kali.
+     */
     public function run(): void
     {
         $categories = [
@@ -39,12 +43,21 @@ class CertificationCategorySeeder extends Seeder
             $types = $category['types'];
             unset($category['types']);
 
-            $category['created_at'] = now();
-            $category['updated_at'] = now();
+            // Cari atau buat kategori
+            $existing = DB::table('certification_categories')
+                ->where('slug', $category['slug'])
+                ->first();
 
-            $categoryId = DB::table('certification_categories')
-                ->insertGetId($category);
+            if ($existing) {
+                $categoryId = $existing->id;
+            } else {
+                $category['created_at'] = now();
+                $category['updated_at'] = now();
+                $categoryId = DB::table('certification_categories')
+                    ->insertGetId($category);
+            }
 
+            // Buat jenis sertifikasi
             foreach ($types as $type) {
                 DB::table('certification_types')->insertOrIgnore([
                     'category_id' => $categoryId,
