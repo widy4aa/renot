@@ -42,6 +42,12 @@ class EmailTemplateSeeder extends Seeder
                 'placeholders' => '{{nama}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}, {{departemen}}',
             ],
             [
+                'type' => 'dokumen_ditambahkan',
+                'subject' => '[ReNot] Dokumen Sertifikasi {{sertifikasi}} Telah Ditambahkan untuk Anda',
+                'body' => "Yth. {{nama}},\n\nKami menginformasikan bahwa administrator telah menambahkan dokumen sertifikasi baru untuk Anda ke dalam sistem ReNot.\n\nDetail Sertifikasi:\n- Jenis Sertifikasi : {{sertifikasi}}\n- Nomor Sertifikat  : {{nomor_sertifikat}}\n- Tanggal Kadaluarsa: {{tanggal_kadaluarsa}}\n\nDokumen sertifikasi Anda telah aktif dan tercatat pada profil Anda.\n\nSilakan login ke sistem ReNot untuk melihat detail dokumen.\n\nHormat kami,\nTim ReNot – Pertamina",
+                'placeholders' => '{{nama}}, {{sertifikasi}}, {{nomor_sertifikat}}, {{tanggal_kadaluarsa}}, {{departemen}}',
+            ],
+            [
                 'type' => 'dokumen_ditolak',
                 'subject' => '[ReNot] Dokumen Sertifikasi {{sertifikasi}} Anda Ditolak',
                 'body' => "Yth. {{nama}},\n\nKami menginformasikan bahwa dokumen sertifikasi yang Anda unggah tidak dapat disetujui oleh administrator.\n\nDetail Sertifikasi:\n- Jenis Sertifikasi : {{sertifikasi}}\n- Nomor Sertifikat  : {{nomor_sertifikat}}\n\nAlasan Penolakan:\n{{alasan_penolakan}}\n\nMohon perbaiki dokumen sesuai alasan di atas dan unggah kembali melalui sistem ReNot.\n\nHormat kami,\nTim ReNot – Pertamina",

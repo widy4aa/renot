@@ -238,6 +238,7 @@ const isSaving  = ref(false);
 const isDragging = ref(false);
 
 const categories  = ref([]);
+const allTypes    = ref([]);
 const pegawaiList = ref([]);
 const selectedCategory = ref('');
 const selectedFile = ref(null);
@@ -259,8 +260,7 @@ const errors = ref({});
 
 const filteredTypes = computed(() => {
     if (!selectedCategory.value) return [];
-    const cat = categories.value.find(c => c.id === Number(selectedCategory.value));
-    return cat?.types ?? [];
+    return allTypes.value.filter(t => String(t.category_id) === String(selectedCategory.value));
 });
 
 watch(selectedCategory, () => { form.value.certification_type_id = ''; });
@@ -290,7 +290,8 @@ function setFile(file) {
 async function fetchCategories() {
     try {
         const { data } = await axios.get('/api/certification-categories');
-        categories.value = data.data ?? data;
+        categories.value = data.data ?? [];
+        allTypes.value   = data.types ?? [];
     } catch { /**/ }
 }
 

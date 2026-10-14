@@ -113,6 +113,24 @@ class DocumentController extends Controller
         $document->approved_at = now();
         $document->save();
 
+        $document->load(['certificationType.category', 'owner.department']);
+
+        // Notifikasi in-app untuk pegawai
+        Notification::create([
+            'user_id' => $document->user_id,
+            'channel' => 'in_app',
+            'type' => 'dokumen_ditambahkan',
+            'title' => 'Dokumen Sertifikasi Baru',
+            'body' => "Admin {$admin->name} menambahkan dokumen sertifikasi {$document->certificationType?->name} untuk Anda.",
+            'document_id' => $document->id,
+            'is_read' => false,
+            'sent_at' => now(),
+            'created_at' => now(),
+        ]);
+
+        // Kirim email notifikasi ke pegawai
+        $this->sendEmailNotification($document, 'dokumen_ditambahkan');
+
         ActivityLog::record(
             activityType: 'dokumen_upload',
             userId: $admin->id,
@@ -123,7 +141,7 @@ class DocumentController extends Controller
 
         return response()->json([
             'message' => 'Dokumen berhasil ditambahkan.',
-            'document' => $this->formatDocument($document->load('certificationType.category', 'owner.department')),
+            'document' => $this->formatDocument($document),
         ], 201);
     }
 
