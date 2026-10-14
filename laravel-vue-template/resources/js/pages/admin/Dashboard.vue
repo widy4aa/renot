@@ -595,7 +595,7 @@ async function fetchDashboard() {
         recentActivities.value = data.recent_activities ?? [];
         pendingRegistrations.value = data.pending_registrations ?? [];
     } catch (e) {
-        console.error('Dashboard admin error:', e);
+        // Gagal memuat dashboard data
     } finally {
         isLoading.value = false;
     }

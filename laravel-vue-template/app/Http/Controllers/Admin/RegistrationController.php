@@ -9,6 +9,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class RegistrationController extends Controller
@@ -77,7 +78,7 @@ class RegistrationController extends Controller
         try {
             Mail::to($user->email)->send(new RegistrationMail('registrasi_approved', $user));
         } catch (\Throwable $e) {
-            // Lanjut meski email gagal
+            Log::warning("Gagal mengirim email persetujuan registrasi ke {$user->email}: ".$e->getMessage());
         }
 
         // Catat audit trail
@@ -118,7 +119,7 @@ class RegistrationController extends Controller
         try {
             Mail::to($user->email)->send(new RegistrationMail('registrasi_rejected', $user));
         } catch (\Throwable $e) {
-            // Lanjut meski email gagal
+            Log::warning("Gagal mengirim email penolakan registrasi ke {$user->email}: ".$e->getMessage());
         }
 
         // Catat audit trail

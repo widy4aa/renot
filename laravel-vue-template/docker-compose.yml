@@ -6,15 +6,15 @@ services:
     container_name: renot_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-root}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
+      POSTGRES_USER: ${DB_USERNAME:-renot_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-db85cab2ec42fc4192ac5bfbe2167651}
       POSTGRES_DB: ${DB_DATABASE:-renot}
     # Port TIDAK di-expose ke host — hanya accessible dari container network
-    # Untuk akses manual: podman-compose exec db psql -U root -d renot
+    # Untuk akses manual: podman-compose exec db psql -U renot_user -d renot
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d renot"]
+      test: ["CMD-SHELL", "pg_isready -U renot_user -d renot"]
       interval: 5s
       timeout: 5s
       retries: 10

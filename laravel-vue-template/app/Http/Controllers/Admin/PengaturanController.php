@@ -8,6 +8,7 @@ use App\Models\MailConfig;
 use App\Models\ReminderSchedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class PengaturanController extends Controller
@@ -199,8 +200,15 @@ class PengaturanController extends Controller
                     ->subject("[ReNot] Test Profile \"{$mailConfig->name}\" Berhasil"),
             );
         } catch (\Throwable $e) {
+            Log::error('SMTP Test Mail failed: '.$e->getMessage(), [
+                'profile_id' => $mailConfig->id,
+                'profile_name' => $mailConfig->name,
+                'host' => $mailConfig->mail_host,
+                'port' => $mailConfig->mail_port,
+            ]);
+
             return response()->json([
-                'message' => 'Gagal: '.$e->getMessage(),
+                'message' => 'Gagal mengirim email uji coba. Periksa kembali host, port, username, dan password SMTP Anda.',
             ], 422);
         }
 

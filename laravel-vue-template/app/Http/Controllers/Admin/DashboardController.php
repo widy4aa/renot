@@ -60,8 +60,6 @@ class DashboardController extends Controller
             ])
             ->get()
             ->map(function ($dep) {
-                $baseQuery = fn () => Document::whereHas('owner', fn ($q) => $q->where('department_id', $dep->id));
-
                 $counts = DB::table('documents')
                     ->join('users', 'documents.user_id', '=', 'users.id')
                     ->where('users.department_id', $dep->id)
